@@ -84,7 +84,6 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
 	WriteRegister(REG_PTR1,(RCS421RegVal)(kernel_page_table));
 	long addr;
-	int i;
     for (addr = VMEM_1_BASE; addr<(unsigned long)(&_etext); addr+=PAGESIZE) {
         i = (addr-VMEM_1_BASE)>>PAGESHIFT;
         kernel_page_table[i].pfn = addr>>PAGESHIFT; //page frame number
