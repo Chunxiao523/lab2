@@ -2,7 +2,10 @@
 #include <comp421/hardware.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h> 
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 /*
 mid term
 initializing interrupts, enabling virtual memory, and creating the idle and init processes.
