@@ -10,7 +10,7 @@
  *  program comes from the Unix file identified by "name", and its
  *  arguments come from the array at "args", which is in standard
  *  argv format.
- *
+ * 
  *  Returns:
  *      0 on success
  *     -1 on any error for which the current process is still runnable
