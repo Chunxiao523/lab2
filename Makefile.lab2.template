@@ -33,7 +33,7 @@ ALL = yalnix idle
 #	make up your kernel, and KERNEL_SRCS should  be a list of
 #	the corresponding source files that make up your kernel.
 #
-KERNEL_OBJS = load_program.o
+KERNEL_OBJS = load_program.o 
 KERNEL_SRCS = load_program.c
 
 #
