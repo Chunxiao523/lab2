@@ -71,6 +71,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	 interrupt_vector_table[TRAP_MATH] = TrapMath;
 	 interrupt_vector_table[TRAP_TTY_RECEIVE] = TrapTTYReceive;
 	 interrupt_vector_table[TRAP_TTY_TRANSMIT] = TrapTTYTransmit;
+	 int i;
 	 for (i=7; i<TRAP_VECTOR_SIZE; i++) {
         interrupt_vector_table[i] = NULL;
     }
@@ -117,7 +118,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	 */
 
 	idle = (pcb*)malloc(sizeof(pcb));
-    idle->pid = next_pid++;
+    idle->pid = 0;
     idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
 
     LoadProgram("idle",cmd_args,info);
@@ -132,10 +133,10 @@ int SetKernelBrk(void *addr) {
 			int i;
 			/* Given a virtual page number, assign a physical page to its corresponding pte entry */
 			for(i = (UP_TO_PAGE(kernel_cur_break) - VMEM_1_BASE)>>PAGESHIFT; i < (UP_TO_PAGE(addr) - VMEM_1_BASE)>>PAGESHIFT; i++) {
-				pt_r1[i].pfn = getFreePage();
-                pt_r1[i].valid = 1;
-                pt_r1[i].kprot = PROT_READ|PROT_WRITE;
-                pt_r1[i].uprot = PROT_NONE;
+//				pt_r1[i].pfn = getFreePage();
+//                pt_r1[i].valid = 1;
+//                pt_r1[i].kprot = PROT_READ|PROT_WRITE;
+//                pt_r1[i].uprot = PROT_NONE;
 			}
 		} else {
 
@@ -185,7 +186,7 @@ void TrapClock(ExceptionInfo *info) {
 
 }
 void TrapIllegal(ExceptionInfo *info) {
-	 printf("[TRAP_ILLEGAL] Trapped Illegal Instruction, pid %d\n", pid);
+	 printf("[TRAP_ILLEGAL] Trapped Illegal Instruction, pid %d\n", 0);
 	 switch((*info).code) {
 	 	case TRAP_ILLEGAL_ILLOPC:
 	 		printf("Illegal opcode \n");
@@ -211,7 +212,7 @@ void TrapIllegal(ExceptionInfo *info) {
 	 	case TRAP_ILLEGAL_BADSTK:
 	 		printf("Bad stack \n");
 	 		break;
-	 	case TRAP_ILLEGAL__KERNELI:
+	 	case TRAP_ILLEGAL_KERNELI:
 	 		printf("Linux kernel sent SIGILL \n");
 	 		break;
 	 	case TRAP_ILLEGAL_USERIB:
