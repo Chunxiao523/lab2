@@ -34,7 +34,7 @@ ALL = yalnix idle
 #	the corresponding source files that make up your kernel.
 #
 KERNEL_OBJS = yalnix.o
-KERNEL_SRCS = yalnix.c 
+KERNEL_SRCS = yalnix.c
 #
 #	You should not have to modify anything else in this Makefile
 #	below here.  If you want to, however, you may modify things

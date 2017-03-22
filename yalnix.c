@@ -423,7 +423,7 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
     // >>>>     uprot = PROT_READ | PROT_EXEC
     // >>>>     pfn   = a new page of physical memory
     for (i = MEM_INVALID_PAGES; i < MEM_INVALID_PAGES + text_npg; i++) {
-        *brk_pn = *brk_pn + 1;
+      //  *brk_pn = *brk_pn + 1;
         if (free_page_deq(REGION_0, i, PROT_READ | PROT_WRITE, PROT_READ | PROT_EXEC) < 0) {
             free(argbuf);
             close(fd);
@@ -440,7 +440,7 @@ int LoadProgram(char *name, char **args, ExceptionInfo *info) {
     // >>>>     pfn   = a new page of physical memory
 
     for (i = MEM_INVALID_PAGES + text_npg; i < MEM_INVALID_PAGES + text_npg + data_bss_npg; i++) {
-        *brk_pn = *brk_pn + 1;
+      //  *brk_pn = *brk_pn + 1;
         if (free_page_deq(REGION_0, i, PROT_READ | PROT_WRITE, PROT_READ | PROT_WRITE) < 0) {
             free(argbuf);
             close(fd);
