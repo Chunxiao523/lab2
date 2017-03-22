@@ -120,7 +120,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     idle->pid = 0;
     idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
 
-    LoadProgram("idle",cmd_args,info);
+  //  LoadProgram("idle",cmd_args,info);
 
 }
 
