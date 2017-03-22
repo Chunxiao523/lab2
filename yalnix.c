@@ -55,11 +55,11 @@ void TrapTTYTransmit(ExceptionInfo *info);
  * *org_brk gives the initial value of the kernel’s “break
  * **cmd_args.containing a pointer to each argument from the boot command line
  */
-void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, char **cmd_args) { 
+void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, char **cmd_args) {
 	kernel_cur_break = orig_brk;
 	handler *interrupt_vector_table = (handler *) calloc(TRAP_VECTOR_SIZE, sizeof(handler));
-	kernel_page_table = (pte*)malloc(PAGE_TABLE_SIZE);
-	process_page_table = (pte*)malloc(PAGE_TABLE_SIZE);
+	kernel_page_table = (pte *)malloc(PAGE_TABLE_SIZE);
+	process_page_table = (pte *)malloc(PAGE_TABLE_SIZE);
 	/*
 	 * Initialize the interrupt table
 	 *
