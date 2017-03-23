@@ -9,5 +9,5 @@
 
 
 
-int free_page = 0;
-struct pte *process_page_table;
+extern int free_page;
+extern struct pte *process_page_table;

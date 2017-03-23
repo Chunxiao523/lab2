@@ -58,6 +58,7 @@ unsigned long find_free_page();
  * **cmd_args.containing a pointer to each argument from the boot command line
  */
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, char **cmd_args) {
+    free_page = 0;
 	kernel_cur_break = orig_brk;
 	handler *interrupt_vector_table = (handler *) calloc(TRAP_VECTOR_SIZE, sizeof(handler));
 	kernel_page_table = (struct pte *)malloc(PAGE_TABLE_SIZE);
