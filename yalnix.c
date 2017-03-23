@@ -168,7 +168,7 @@ int SetKernelBrk(void *addr) {
 	} else {
 		if(addr > kernel_cur_break) {
 			int i;
-            if ((unsigned long) addr - UP_TO_PAGE(kernel_cur_break) > PAGESIZD*free_page) return -1;
+            if ((unsigned long) addr - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_page) return -1;
 			/* Given a virtual page number, assign a physical page to its corresponding pte entry */
 			for(i = (UP_TO_PAGE(kernel_cur_break) - VMEM_1_BASE)>>PAGESHIFT; i < (UP_TO_PAGE(addr) - VMEM_1_BASE)>>PAGESHIFT; i++) {
                 kernel_page_table[i].pfn = find_free_page();
