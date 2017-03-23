@@ -98,7 +98,6 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
 
     /* initialize the free phys pages list */
-    int i;
     head = (phys_free*) malloc(sizeof(phys_free));
     phys_free* pointer = head;
     for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
@@ -111,7 +110,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     pointer = head;
     phys_free* t;
     while (pointer->next!=NULL) {
-        if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && tmp->next->phys_frame_num<((unsigned long)kernel_brk>>PAGESHIFT)) {
+        if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_frame_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
             t = pointer->next;
             pointer->next = pointer->next->next;
             free_page --;
