@@ -4,7 +4,7 @@
 // >>>> the ">>>>" description with code for your kernel to implement the
 // >>>> behavior described.  You might also want to save the original
 // >>>> annotations as comments.
-
+#include <help.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
