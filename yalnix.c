@@ -58,6 +58,7 @@ unsigned long find_free_page();
  * **cmd_args.containing a pointer to each argument from the boot command line
  */
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, char **cmd_args) {
+    TracePrintf(1, "kernel_start: KernelStart called with num physical pages: %d.\n", pmem_size/PAGESIZE);
     free_page = 0;
 	kernel_cur_break = orig_brk;
 	handler *interrupt_vector_table = (handler *) calloc(TRAP_VECTOR_SIZE, sizeof(handler));
@@ -81,7 +82,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         interrupt_vector_table[i] = NULL;
     }
 	WriteRegister(REG_VECTOR_BASE, interrupt_vector_table);
-
+    TracePrintf(2, "kernel_start: interrupt table initialized.\n");
 
     /* initialize the free phys pages list */
     head = (phys_free*) malloc(sizeof(phys_free));
@@ -104,7 +105,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         }
         else pointer = pointer->next;
     }
-
+    TracePrintf(2, "kernel_start: free physical address list initialized.\n");
 	/* 
      * Initialize the page table and page table register for region 1 and 0
      */
@@ -125,6 +126,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         kernel_page_table[i].kprot = PROT_READ|PROT_WRITE;
         kernel_page_table[i].uprot = PROT_NONE;
     }
+    TracePrintf(2, "kernel_start: region 1 page table initialized.\n");
 
     WriteRegister(REG_PTR0, (RCS421RegVal)(process_page_table));
     for (addr = KERNEL_STACK_BASE; addr <= VMEM_0_LIMIT; addr+= PAGESIZE) {
@@ -134,11 +136,13 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         process_page_table[i].kprot = PROT_READ|PROT_WRITE;
         process_page_table[i].uprot = PROT_NONE;
     }
+    TracePrintf(2, "kernel_start: region 0 page table initialized.\n");
+
 
 	/* enable the virtual memory subsystem */
 	WriteRegister(REG_VM_ENABLE, 1); 
 	vir_mem = 1;
-
+    TracePrintf(2, "kernel_start: virtual memory enabled.\n");
 	/*
 	 * Create idle and init process
 	 */
@@ -148,6 +152,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
 
     LoadProgram("idle",cmd_args,info);
+    TracePrintf(2, "kernel_start: idle process pcb initialized.\n");
 
 }
 
