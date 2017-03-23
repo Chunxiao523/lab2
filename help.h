@@ -8,6 +8,6 @@
 #include <unistd.h>
 
 
-
+typedef struct pte pte;
 extern int free_page;
 extern struct pte *process_page_table;
