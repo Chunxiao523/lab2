@@ -11,13 +11,8 @@ void *kernel_cur_break;
  * 0: not, 1: yes
  */
 int vir_mem = 0;
-/*
- * The number of free pages
- */
-int free_page = 0;
 
 struct pte *kernel_page_table;
-struct pte *process_page_table;
 
 /*
  * The table used to store the interrupts
@@ -51,7 +46,7 @@ void TrapMemory(ExceptionInfo *info);
 void TrapMath(ExceptionInfo *info);
 void TrapTTYReceive(ExceptionInfo *info);
 void TrapTTYTransmit(ExceptionInfo *info);
-
+unsigned long find_free_page();
 
 
 /*
