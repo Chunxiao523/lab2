@@ -136,17 +136,17 @@ LoadProgram(char *name, char **args, ExceptionInfo *frame)
      *  allocated to this process that will be freed.
      */
 
-//    int required_free_physical_pages = text_npg + data_bss_npg + stack_npg - num_pages_in_use(page_table_to_load);
+    int required_free_physical_pages = text_npg + data_bss_npg + stack_npg - num_pages_in_use(page_table_to_load);
 //
-//    if (num_free_physical_pages() < required_free_physical_pages) {
-//      TracePrintf(0, "LoadProgram: program '%s' size too large for physical memory\n", name);
-//      free(argbuf);
-//      close(fd);
-//      return (-1);
-//    }
+    if (num_free_physical_pages() < required_free_physical_pages) {
+        TracePrintf(0, "LoadProgram: program '%s' size too large for physical memory\n", name);
+        free(argbuf);
+        close(fd);
+        return (-1);
+    }
 //
 //    //Initialize sp for the current process to (char *)cpp.
-//    frame->sp = (char *)cpp;
+        frame->sp = (char *)cpp;
 //
 //    TracePrintf(3, "LoadProgram: Stack Pointer Initialized.\n");
 //
@@ -156,13 +156,13 @@ LoadProgram(char *name, char **args, ExceptionInfo *frame)
 //     *  but be sure to leave the kernel stack for this process (which
 //     *  is also in Region 0) alone.
 //     */
-//    for(i = 0; i < PAGE_TABLE_LEN - KERNEL_STACK_PAGES; i++) {
-//      if(page_table_to_load[i].valid == 1){
-//        //free physical memory and set as invalid
-//        free_physical_page(page_table_to_load[i].pfn);
-//        page_table_to_load[i].valid = 0;
-//      }
-//    }
+   for(i = 0; i < PAGE_TABLE_LEN - KERNEL_STACK_PAGES; i++) {
+     if(page_table_to_load[i].valid == 1){
+       //free physical memory and set as invalid
+       free_physical_page(page_table_to_load[i].pfn);
+       page_table_to_load[i].valid = 0;
+     }
+   }
 //
 //    TracePrintf(3, "LoadProgram: old physical memory belonging to process freed.\n");
 //
