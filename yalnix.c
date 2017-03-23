@@ -6,11 +6,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-/*
-mid term
-initializing interrupts, enabling virtual memory, and creating the idle and init processes.
-*/
-
 
 /*
  * keep tracking the location of the current break for the kernel
@@ -26,8 +21,6 @@ int vir_mem = 0;
  * The number of free pages
  */
 int free_page = 0;
-
-phys_free* head;
 
 struct pte *kernel_page_table;
 struct pte *process_page_table;
@@ -50,6 +43,9 @@ typedef struct pf {
     unsigned int phys_page_num;
     struct pf *next;
 } phys_free;
+
+
+phys_free* head;
 
 
 pcb *idle;
