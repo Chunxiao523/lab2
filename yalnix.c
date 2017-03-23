@@ -4,7 +4,7 @@
 /*
  * keep tracking the location of the current break for the kernel
  */
-void *kernel_cur_break;  
+void *kernel_cur_break;   
 
 /*
  * flag to indicate if you have yet enabled virtual memory
