@@ -110,7 +110,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     pointer = head;
     phys_free* t;
     while (pointer->next!=NULL) {
-        if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_frame_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
+        if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_page_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
             t = pointer->next;
             pointer->next = pointer->next->next;
             free_page --;
