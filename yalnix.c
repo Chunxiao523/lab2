@@ -11,13 +11,14 @@ void *kernel_cur_break;
  * 0: not, 1: yes
  */
 int vir_mem = 0;
-
+/*
+ * Page table for the region 1
+ */
 struct pte *kernel_page_table;
-
 /*
  * The table used to store the interrupts
  */
-typedef void (*handler)(ExceptionInfo *info); 
+typedef void (*interrupt_handler)(ExceptionInfo *info);
 /* 
  * Data structure of process
  */
@@ -31,10 +32,11 @@ typedef struct pcb {
 typedef struct pf {
     unsigned int phys_page_num;
     struct pf *next;
-} phys_free;
-
-
-phys_free* head;
+} phys_free_page;
+/*
+ * Linked list to store the free pages
+ */
+phys_free_page *head;
 
 
 pcb *idle;
@@ -47,7 +49,7 @@ void TrapMath(ExceptionInfo *info);
 void TrapTTYReceive(ExceptionInfo *info);
 void TrapTTYTransmit(ExceptionInfo *info);
 unsigned long find_free_page();
-
+void allocPageTable(pcb* p);
 
 /*
  * The procedure named KernelStart is automatically called by the bootstrap firmware in the computer
@@ -58,18 +60,21 @@ unsigned long find_free_page();
  * **cmd_args.containing a pointer to each argument from the boot command line
  */
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, char **cmd_args) {
+    unsigned int i;
     TracePrintf(1, "kernel_start: KernelStart called with num physical pages: %d.\n", pmem_size/PAGESIZE);
     free_page = 0;
 	kernel_cur_break = orig_brk;
-	handler *interrupt_vector_table = (handler *) calloc(TRAP_VECTOR_SIZE, sizeof(handler));
-	kernel_page_table = (struct pte *)malloc(PAGE_TABLE_SIZE);
-	process_page_table = (struct pte *)malloc(PAGE_TABLE_SIZE);
+
+	kernel_page_table = (pte*)malloc(PAGE_TABLE_SIZE);
+	process_page_table = (pte*)malloc(PAGE_TABLE_SIZE);
 	/*
 	 * Initialize the interrupt table
 	 * You need to initialize page table entries for Region 1 for the kernel's text, data, bss, and heap,
 	 * and for Region 0 for the kernel's stack.
 	 * All other PTEs should be marked invalid initially.
 	 */
+    interrupt_handler *interrupt_vector_table = (interrupt_handler *) calloc(TRAP_VECTOR_SIZE, sizeof(interrupt_handler));
+
 	 interrupt_vector_table[TRAP_KERNEL] = TrapKernel;
 	 interrupt_vector_table[TRAP_CLOCK] = TrapClock;
 	 interrupt_vector_table[TRAP_ILLEGAL] = TrapIllegal;
@@ -77,25 +82,25 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	 interrupt_vector_table[TRAP_MATH] = TrapMath;
 	 interrupt_vector_table[TRAP_TTY_RECEIVE] = TrapTTYReceive;
 	 interrupt_vector_table[TRAP_TTY_TRANSMIT] = TrapTTYTransmit;
-	 int i;
+
 	 for (i=7; i<TRAP_VECTOR_SIZE; i++) {
         interrupt_vector_table[i] = NULL;
-    }
-	WriteRegister(REG_VECTOR_BASE, interrupt_vector_table);
+     }
+	WriteRegister(REG_VECTOR_BASE, (RCS421RegVal)(interrupt_vector_table));
     TracePrintf(2, "kernel_start: interrupt table initialized.\n");
 
     /* initialize the free phys pages list */
-    head = (phys_free*) malloc(sizeof(phys_free));
-    phys_free* pointer = head;
+    head = (phys_free_page*) malloc(sizeof(phys_free_page));
+    phys_free_page *pointer = head;
     for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
-        pointer->next = (phys_free*) malloc(sizeof(phys_free));
+        pointer->next = (phys_free_page*) malloc(sizeof(phys_free_page));
         pointer = pointer->next;
         pointer->phys_page_num = free_page;
         free_page++;
     }
 
     pointer = head;
-    phys_free* t;
+    phys_free_page* t;
     while (pointer->next!=NULL) {
         if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_page_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
             t = pointer->next;
@@ -111,7 +116,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
      */
 
 	WriteRegister(REG_PTR1,(RCS421RegVal)(kernel_page_table));
-	long addr;
+	unsigned long addr;
     for (addr = VMEM_1_BASE; addr<(unsigned long)(&_etext); addr+=PAGESIZE) {
         i = (addr-VMEM_1_BASE)>>PAGESHIFT;
         kernel_page_table[i].pfn = addr>>PAGESHIFT; //page frame number
@@ -143,12 +148,13 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	WriteRegister(REG_VM_ENABLE, 1); 
 	vir_mem = 1;
     TracePrintf(2, "kernel_start: virtual memory enabled.\n");
+
 	/*
 	 * Create idle and init process
 	 */
-
 	idle = (pcb*)malloc(sizeof(pcb));
     idle->pid = 0;
+    //allocPageTable(idle);
     idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
 
     LoadProgram("idle",cmd_args,info);
@@ -162,15 +168,16 @@ int SetKernelBrk(void *addr) {
 	} else {
 		if(addr > kernel_cur_break) {
 			int i;
+            if ((unsigned long) addr - UP_TO_PAGE(kernel_cur_break) > PAGESIZD*free_page) return -1;
 			/* Given a virtual page number, assign a physical page to its corresponding pte entry */
 			for(i = (UP_TO_PAGE(kernel_cur_break) - VMEM_1_BASE)>>PAGESHIFT; i < (UP_TO_PAGE(addr) - VMEM_1_BASE)>>PAGESHIFT; i++) {
-//				pt_r1[i].pfn = getFreePage();
-//                pt_r1[i].valid = 1;
-//                pt_r1[i].kprot = PROT_READ|PROT_WRITE;
-//                pt_r1[i].uprot = PROT_NONE;
+				pt_r1[i].pfn = find_free_page();
+                pt_r1[i].valid = 1;
+                pt_r1[i].kprot = PROT_READ|PROT_WRITE;
+                pt_r1[i].uprot = PROT_NONE;
 			}
 		} else {
-
+            return -1;
 		}
 	}
 	return 0;
@@ -277,7 +284,6 @@ void TrapTTYReceive(ExceptionInfo *info) {
 void TrapTTYTransmit(ExceptionInfo *info) {
 
 }
-
 unsigned long find_free_page() {
         if (head->next==NULL) return 0;
         phys_free *tmp = head->next;
@@ -287,4 +293,31 @@ unsigned long find_free_page() {
         free(tmp);
         return ret;
 }
-
+//void allocPageTable(pcb* p)
+//{
+//    if (half_full==0) {
+//        /* set appropriate virtual start address for r0 page table */
+//        p->pt_r0 = (pte*)next_PT_vaddr;
+//        next_PT_vaddr += PAGESIZE/2;
+//        half_full=1;
+//        /* get physical frame for r0 page table
+//         * set the r1 page table entry for the start address of r0 page table */
+//        unsigned long idx = ((unsigned long)(p->pt_r0)-VMEM_1_BASE)>>PAGESHIFT;
+//        if(pt_r1[idx].valid) {
+//            kernel_Exit(ERROR);
+//        }
+//        process_page_table[idx].pfn = getFreePage();
+//        process_page_table[idx].valid = 1;
+//        process_page_table[idx].kprot = PROT_READ|PROT_WRITE;
+//        process_page_table[idx].uprot = PROT_NONE;
+//    }
+//    else {
+//        /* set appropriate virtual start address for r0 page table */
+//        p->pt_r0 = (struct pte*)next_PT_vaddr;
+//        next_PT_vaddr -= PAGESIZE*3/2;
+//
+//
+//        /* whole frame is used, so clear half_full_vaddr and half_full_frame */
+//        half_full=0;
+//    }
+//}
