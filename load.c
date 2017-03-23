@@ -208,7 +208,7 @@ LoadProgram(char *name, char **args, ExceptionInfo *info)
             process_page_table[i].pfn = find_free_page();
             process_page_table[i].valid = 1;
             process_page_table[i].kprot = PROT_READ|PROT_WRITE;
-            process_page_table[i].uprot = ROT_READ|PROT_WRITE;
+            process_page_table[i].uprot = PROT_READ|PROT_WRITE;
         }
      }
     /* And finally the user stack pages */
