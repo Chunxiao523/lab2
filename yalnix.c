@@ -1,12 +1,4 @@
-#include <comp421/yalnix.h>
-#include <comp421/hardware.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
- 
-
+process_page_table
 /*
  * keep tracking the location of the current break for the kernel
  */
@@ -20,10 +12,10 @@ int vir_mem = 0;
 /*
  * The number of free pages
  */
-int free_page = 0;
+
 
 struct pte *kernel_page_table;
-struct pte *process_page_table;
+
 
 /*
  * The table used to store the interrupts
