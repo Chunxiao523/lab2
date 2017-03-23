@@ -12,7 +12,7 @@ void *kernel_cur_break;
  */
 int vir_mem = 0;
 
-struct pte *kernel_page_table; 
+struct pte *kernel_page_table;
 
 /*
  * The table used to store the interrupts
