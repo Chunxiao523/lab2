@@ -26,13 +26,7 @@ typedef struct pcb {
     SavedContext *ctx;
     int pid;
 } pcb;
-/*
- * Linked list used to store the free physical address
- */
-typedef struct pf {
-    unsigned int phys_page_num;
-    struct pf *next;
-} phys_free_page;
+
 /*
  * Linked list to store the free pages
  */

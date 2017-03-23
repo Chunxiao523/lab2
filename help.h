@@ -11,3 +11,11 @@
 typedef struct pte pte;
 extern int free_page;
 extern struct pte *process_page_table;
+/*
+ * Linked list used to store the free physical address
+ */
+typedef struct pf {
+    unsigned int phys_page_num;
+    struct pf *next;
+} phys_free_page;
+extern phys_free_page phys_free_page;
