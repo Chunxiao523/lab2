@@ -5,8 +5,8 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-
  
+
 /*
  * keep tracking the location of the current break for the kernel
  */
