@@ -166,7 +166,7 @@ int SetKernelBrk(void *addr) {
 	} else {
 		if(addr > kernel_cur_break) {
 			int i;
-            if ((unsigned long) addr - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_page) return -1;
+            if ((unsigned long) addr - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_page_num) return -1;
 			/* Given a virtual page number, assign a physical page to its corresponding pte entry */
 			for(i = (UP_TO_PAGE(kernel_cur_break) - VMEM_1_BASE)>>PAGESHIFT; i < (UP_TO_PAGE(addr) - VMEM_1_BASE)>>PAGESHIFT; i++) {
                 kernel_page_table[i].pfn = find_free_page();
@@ -284,7 +284,7 @@ void TrapTTYTransmit(ExceptionInfo *info) {
 }
 unsigned long find_free_page() {
         if (head->next==NULL) return 0;
-        phys_free *tmp = head->next;
+		free_page *tmp = head->next;
         head->next = tmp->next;
         free_page_num--;
         unsigned long ret = tmp->phys_page_num;
