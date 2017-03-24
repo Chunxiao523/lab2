@@ -139,7 +139,7 @@ LoadProgram(char *name, char **args, ExceptionInfo *info)
     // >>>> freed below before we allocate the needed pages for
     // >>>> the new program being loaded.
 
-    if (text_npg + data_bss_npg + stack_npg > free_page){
+    if (text_npg + data_bss_npg + stack_npg > free_page_num){
     	TracePrintf(0, "LoadProgram: program '%s' size too large for physical memory\n", name);
     	free(argbuf);
     	close(fd);
