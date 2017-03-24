@@ -66,8 +66,8 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     free_page_num = 0;
 	kernel_cur_break = orig_brk;
 
-	kernel_page_table = (pte*)malloc(PAGE_TABLE_SIZE);
-	process_page_table = (pte*)malloc(PAGE_TABLE_SIZE);
+	kernel_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
+	process_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
 	/*
 	 * Initialize the interrupt table
 	 * You need to initialize page table entries for Region 1 for the kernel's text, data, bss, and heap,
@@ -118,31 +118,39 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
      */
 
 	WriteRegister(REG_PTR1,(RCS421RegVal)(kernel_page_table));
-//	unsigned long addr;
-//    for (addr = VMEM_1_BASE; addr<(unsigned long)(&_etext); addr+=PAGESIZE) {
-//        i = (addr-VMEM_1_BASE)>>PAGESHIFT;
-//        kernel_page_table[i].pfn = addr>>PAGESHIFT; //page frame number
-//        kernel_page_table[i].valid = 1;
-//        kernel_page_table[i].kprot = PROT_READ|PROT_EXEC;
-//        kernel_page_table[i].uprot = PROT_NONE;
-//    }
-//    for (; addr<(unsigned long)kernel_cur_break; addr += PAGESIZE) {
-//        i = (addr-VMEM_1_BASE)>>PAGESHIFT;
-//        kernel_page_table[i].pfn = addr>>PAGESHIFT;
-//        kernel_page_table[i].valid = 1;
-//        kernel_page_table[i].kprot = PROT_READ|PROT_WRITE;
-//        kernel_page_table[i].uprot = PROT_NONE;
-//    }
+	unsigned long addr;
+    for (addr = VMEM_1_BASE; addr<(unsigned long)(&_etext); addr+=PAGESIZE) {
+        i = (addr-VMEM_1_BASE)>>PAGESHIFT;
+        kernel_page_table[i].pfn = addr>>PAGESHIFT; //page frame number
+        kernel_page_table[i].valid = 1;
+        kernel_page_table[i].kprot = PROT_READ|PROT_EXEC;
+        kernel_page_table[i].uprot = PROT_NONE;
+    }
+    for (; addr<(unsigned long)kernel_cur_break; addr += PAGESIZE) {
+        i = (addr-VMEM_1_BASE)>>PAGESHIFT;
+        kernel_page_table[i].pfn = addr>>PAGESHIFT;
+        kernel_page_table[i].valid = 1;
+        kernel_page_table[i].kprot = PROT_READ|PROT_WRITE;
+        kernel_page_table[i].uprot = PROT_NONE;
+    }
+	for (; addr<VMEM_1_LIMIT; addr += PAGESIZE) {
+		i = (addr-VMEM_1_BASE)>>PAGESHIFT;
+		kernel_page_table[i].valid = 0;
+	}
     TracePrintf(2, "kernel_start: region 1 page table initialized.\n");
 
     WriteRegister(REG_PTR0, (RCS421RegVal)(process_page_table));
-//    for (addr = KERNEL_STACK_BASE; addr <= VMEM_0_LIMIT; addr+= PAGESIZE) {
-//    	i = (addr - VMEM_0_BASE)>>PAGESHIFT; //VMEM_0_BASE = 0
-//    	process_page_table[i].pfn = addr>>PAGESHIFT;
-//        process_page_table[i].valid = 1;
-//        process_page_table[i].kprot = PROT_READ|PROT_WRITE;
-//        process_page_table[i].uprot = PROT_NONE;
-//    }
+    for (addr = KERNEL_STACK_BASE; addr <= VMEM_0_LIMIT; addr+= PAGESIZE) {
+    	i = (addr - VMEM_0_BASE)>>PAGESHIFT; //VMEM_0_BASE = 0
+    	process_page_table[i].pfn = addr>>PAGESHIFT;
+        process_page_table[i].valid = 1;
+        process_page_table[i].kprot = PROT_READ|PROT_WRITE;
+        process_page_table[i].uprot = PROT_NONE;
+    }
+	for (addr = VMEM_0_BASE; addr<KERNEL_STACK_BASE; addr += PAGESIZE) {
+		i = (addr-VMEM_0_BASE)>>PAGESHIFT;
+		process_page_table[i].valid = 0;
+	}
     TracePrintf(2, "kernel_start: region 0 page table initialized.\n");
 
 
