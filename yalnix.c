@@ -329,6 +329,7 @@ unsigned long find_free_page() {
         free_page_num--;
         unsigned long ret = tmp->phys_page_num;
         free(tmp);
+		TracePrintf(2, "Find Free Page: return number is %d \n", ret);
         return ret;
 }
 //void allocPageTable(pcb* p)
