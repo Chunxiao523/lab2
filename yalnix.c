@@ -61,6 +61,7 @@ void allocPageTable(pcb* p);
  */
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, char **cmd_args) {
     unsigned int i;
+	printf("12321232123");
     TracePrintf(1, "kernel_start: KernelStart called with num physical pages: %d.\n", pmem_size/PAGESIZE);
     free_page_num = 0;
 	kernel_cur_break = orig_brk;
@@ -163,12 +164,17 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 }
 
 int SetKernelBrk(void *addr) {
+	printf("1232132132");
+	if (*(unsigned long *)addr >= VMEM_1_LIMIT || *(unsigned long *)addr < VMEM_1_BASE) return -1;
 	if (vir_mem == 0) {
 		kernel_cur_break = addr;
 	} else {
+		// first allocate free memory of size *addr - *kernel_brk from list of free phisical memory
+		// second map these new free phisical memory to page_table_1
+		// then grow kernel_brk to addr frame by frame
 		if(addr > kernel_cur_break) {
 			int i;
-            if ((unsigned long) addr - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_page_num) return -1;
+            if ( DOWN_TO_PAGE(*(unsigned long *)addr) - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_page_num) return -1;
 			/* Given a virtual page number, assign a physical page to its corresponding pte entry */
 			for(i = (UP_TO_PAGE(kernel_cur_break) - VMEM_1_BASE)>>PAGESHIFT; i < (UP_TO_PAGE(addr) - VMEM_1_BASE)>>PAGESHIFT; i++) {
                 kernel_page_table[i].pfn = find_free_page();
@@ -177,7 +183,21 @@ int SetKernelBrk(void *addr) {
                 kernel_page_table[i].uprot = PROT_NONE;
 			}
 		} else {
-            return -1;
+//			if(( *(unsigned long*)kernel_cur_break - DOWN_TO_PAGE(*(unsigned long*)addr))/PAGESIZE >=2)
+//			{
+//				for (i = 0; i < ( *(unsigned long*)kernel_cur_break - DOWN_TO_PAGE(*(unsigned long*)addr))/PAGESIZE -1;i++)
+//				{
+//					int tmp = kernel_page_table[(*(unsigned long*)kernel_cur_break-VMEM_1_BASE)/PAGESIZE-1].pfn;
+//					*(int *)(*(unsigned long*)kernel_cur_break - PAGESIZE) = -1;
+//					kernel_page_table[(*(unsigned long*)kernel_cur_break-VMEM_1_BASE)/PAGESIZE-1].pfn = nPF;
+//					WriteRegister(REG_TLB_FLUSH,*(unsigned long*)kernel_brk-PAGESIZE);
+//					*(int *)(*(unsigned long*)kernel_brk - PAGESIZE) = tmp;
+//					nPF = tmp;
+//					numOfFPF++;
+//					PTR1[(*(unsigned long*)kernel_brk-VMEM_1_BASE)/PAGESIZE-1].valid = 0;
+//					*(unsigned long*)kernel_brk -= PAGESIZE;
+//				}
+//			}
 		}
 		kernel_cur_break = UP_TO_PAGE(addr);
 	}
