@@ -127,6 +127,9 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         kernel_page_table[i].kprot = PROT_READ|PROT_EXEC;
         kernel_page_table[i].uprot = PROT_NONE;
     }
+
+	TracePrintf(2, "1.\n");
+
     for (; addr<(unsigned long)kernel_cur_break; addr += PAGESIZE) {
         i = (addr-VMEM_1_BASE)>>PAGESHIFT;
         kernel_page_table[i].pfn = addr>>PAGESHIFT;
@@ -134,6 +137,9 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         kernel_page_table[i].kprot = PROT_READ|PROT_WRITE;
         kernel_page_table[i].uprot = PROT_NONE;
     }
+
+	TracePrintf(2, "2.\n");
+
 	for (; addr<VMEM_1_LIMIT; addr += PAGESIZE) {
 		i = (addr-VMEM_1_BASE)>>PAGESHIFT;
 		kernel_page_table[i].valid = 0;
