@@ -122,12 +122,15 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	unsigned long addr;
     for (addr = VMEM_1_BASE; addr<(unsigned long)(&_etext); addr+=PAGESIZE) {
 		TracePrintf(2, "haha %d.\n", addr);
+
+		TracePrintf(2, "hahaha %d.\n", (unsigned long)(&_etext));
         i = (addr-VMEM_1_BASE)>>PAGESHIFT;
 		TracePrintf(2, "hahahaha %d.\n", i);
         kernel_page_table[i].pfn = addr>>PAGESHIFT; //page frame number
         kernel_page_table[i].valid = 1;
         kernel_page_table[i].kprot = PROT_READ|PROT_EXEC;
         kernel_page_table[i].uprot = PROT_NONE;
+		TracePrintf(2, "hahahahahaha\n");
     }
 
 	TracePrintf(2, "1.\n");
