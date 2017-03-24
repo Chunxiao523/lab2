@@ -19,3 +19,5 @@ typedef struct pf {
     struct pf *next;
 } free_page;
 extern free_page *phys_free_page;
+
+unsigned long find_free_page(void);
