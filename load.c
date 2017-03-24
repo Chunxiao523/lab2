@@ -201,7 +201,7 @@ LoadProgram(char *name, char **args, ExceptionInfo *info)
     for (; i < text_npg + data_bss_npg + MEM_INVALID_PAGES; i ++) {
         if (i < text_npg + MEM_INVALID_PAGES) {
             process_page_table[i].pfn = find_free_page();
-            TracePrintf(0, "LoadProgram: find free page  \n")
+            TracePrintf(0, "LoadProgram: find free page  \n");
             process_page_table[i].valid = 1;
             process_page_table[i].kprot = PROT_READ|PROT_WRITE;
             process_page_table[i].uprot = PROT_READ|PROT_EXEC;
