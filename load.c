@@ -169,15 +169,18 @@ LoadProgram(char *name, char **args, ExceptionInfo *info)
 
     /*
      *  Fill in the page table with the right number of text,
-     *  data+bss, and stack pages.  We set all the text pages
-     *  here to be read/write, just like the data+bss and
-     *  stack pages, so that we can read the text into them
-     *  from the file.  We then change them read/execute.
+     *  data+bss, and stack pages.
+     *  We set all the text pages here to be read/write, just like the data+bss and stack pages, so that we can read the text into them
+     *  from the file.
+     *  We then change them read/execute.
      */
 
     // >>>> Leave the first MEM_INVALID_PAGES number of PTEs in the
     // >>>> Region 0 page table unused (and thus invalid)
-     
+
+    for (i = 0;i < MEM_INVALID_PAGES; i ++) {
+        process_page_table[i].valid = 0;
+    }
     /* First, the text pages */
     // >>>> For the next text_npg number of PTEs in the Region 0
     // >>>> page table, initialize each PTE:
@@ -193,13 +196,14 @@ LoadProgram(char *name, char **args, ExceptionInfo *info)
     // >>>>     kprot = PROT_READ | PROT_WRITE
     // >>>>     uprot = PROT_READ | PROT_WRITE
     // >>>>     pfn   = a new page of physical memory
-    for (i = MEM_INVALID_PAGES; i < text_npg + data_bss_npg + MEM_INVALID_PAGES; i ++) {
+
+    for (; i < text_npg + data_bss_npg + MEM_INVALID_PAGES; i ++) {
         if (i < text_npg + MEM_INVALID_PAGES) {
             process_page_table[i].pfn = find_free_page();
             process_page_table[i].valid = 1;
             process_page_table[i].kprot = PROT_READ|PROT_WRITE;
             process_page_table[i].uprot = PROT_READ|PROT_EXEC;
-        } else if (i < data_bss_npg + MEM_INVALID_PAGES) {
+        } else {
             process_page_table[i].pfn = find_free_page();
             process_page_table[i].valid = 1;
             process_page_table[i].kprot = PROT_READ|PROT_WRITE;
