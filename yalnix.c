@@ -323,7 +323,10 @@ void TrapTTYTransmit(ExceptionInfo *info) {
 
 }
 unsigned long find_free_page() {
-        if (head->next==NULL) return 0;
+        if (head->next==NULL) {
+			TracePrintf(2, "Find Free Page: list is empty \n");
+			return 0;
+		}
 		free_page *tmp = head->next;
         head->next = tmp->next;
         free_page_num--;
