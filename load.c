@@ -114,8 +114,7 @@ LoadProgram(char *name, char **args, ExceptionInfo *info)
     data_bss_npg = UP_TO_PAGE(li.data_size + li.bss_size) >> PAGESHIFT;
     stack_npg = (USER_STACK_LIMIT - DOWN_TO_PAGE(cpp)) >> PAGESHIFT;
 
-    TracePrintf(0, "LoadProgram: text_npg %d, data_bss_npg %d, stack_npg %d\n",
-	text_npg, data_bss_npg, stack_npg);
+    TracePrintf(0, "LoadProgram: text_npg %d, data_bss_npg %d, stack_npg %d\n", text_npg, data_bss_npg, stack_npg);
 
     /*
      *  Make sure we will leave at least one page between heap and stack
@@ -149,6 +148,7 @@ LoadProgram(char *name, char **args, ExceptionInfo *info)
     // >>>> Initialize sp for the current process to (char *)cpp.
     // >>>> The value of cpp was initialized above.
     info->sp = (char *)cpp;
+    TracePrintf(0, "LoadProgram: sp was set \n");
     /*
      *  Free all the old physical memory belonging to this process,
      *  but be sure to leave the kernel stack for this process (which
@@ -221,6 +221,7 @@ LoadProgram(char *name, char **args, ExceptionInfo *info)
        process_page_table[i].uprot = PROT_READ | PROT_WRITE;
       
     }
+    TracePrintf(0, "LoadProgram: finally the user stack pages \n");
     /*
      *  All pages for the new address space are now in place.  Flush
      *  the TLB to get rid of all the old PTEs from this process, so
