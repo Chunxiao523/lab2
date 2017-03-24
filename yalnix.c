@@ -1,6 +1,8 @@
 
 #include "help.h"
 
+
+
 /*
  * keep tracking the location of the current break for the kernel
  */
@@ -30,7 +32,9 @@ typedef struct pcb {
 /*
  * Linked list to store the free pages
  */
-phys_free_page *head;
+free_page *head;
+
+
 
 
 pcb *idle;
@@ -56,7 +60,7 @@ void allocPageTable(pcb* p);
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, char **cmd_args) {
     unsigned int i;
     TracePrintf(1, "kernel_start: KernelStart called with num physical pages: %d.\n", pmem_size/PAGESIZE);
-    free_page = 0;
+    free_page_num = 0;
 	kernel_cur_break = orig_brk;
 
 	kernel_page_table = (pte*)malloc(PAGE_TABLE_SIZE);
@@ -84,22 +88,22 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     TracePrintf(2, "kernel_start: interrupt table initialized.\n");
 
     /* initialize the free phys pages list */
-    head = (phys_free_page*) malloc(sizeof(phys_free_page));
-    phys_free_page *pointer = head;
+    head = (free_page*) malloc(sizeof(free_page));
+	free_page *pointer = head;
     for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
-        pointer->next = (phys_free_page*) malloc(sizeof(phys_free_page));
+        pointer->next = (free_page*) malloc(sizeof(free_page));
         pointer = pointer->next;
-        pointer->phys_page_num = free_page;
-        free_page++;
+        pointer->phys_page_num = free_page_num;
+        free_page_num++;
     }
 
     pointer = head;
-    phys_free_page* t;
+	free_page *t;
     while (pointer->next!=NULL) {
         if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_page_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
             t = pointer->next;
             pointer->next = pointer->next->next;
-            free_page --;
+            free_page_num --;
             free(t);
         }
         else pointer = pointer->next;
@@ -162,7 +166,7 @@ int SetKernelBrk(void *addr) {
 	} else {
 		if(addr > kernel_cur_break) {
 			int i;
-            if ((unsigned long) addr - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*phys_free_page) return -1;
+            if ((unsigned long) addr - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_page) return -1;
 			/* Given a virtual page number, assign a physical page to its corresponding pte entry */
 			for(i = (UP_TO_PAGE(kernel_cur_break) - VMEM_1_BASE)>>PAGESHIFT; i < (UP_TO_PAGE(addr) - VMEM_1_BASE)>>PAGESHIFT; i++) {
                 kernel_page_table[i].pfn = find_free_page();
@@ -282,7 +286,7 @@ unsigned long find_free_page() {
         if (head->next==NULL) return 0;
         phys_free *tmp = head->next;
         head->next = tmp->next;
-        free_page--;
+        free_page_num--;
         unsigned long ret = tmp->phys_page_num;
         free(tmp);
         return ret;

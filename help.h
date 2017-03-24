@@ -9,7 +9,7 @@
 
 
 typedef struct pte pte;
-//extern int free_page;
+extern int free_page_num;
 extern struct pte *process_page_table;
 /*
  * Linked list used to store the free physical address
