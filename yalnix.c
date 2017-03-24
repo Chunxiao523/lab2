@@ -169,10 +169,10 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	/*
 	 * Create idle and init process
 	 */
-//	idle = (pcb*)malloc(sizeof(pcb));
-//    idle->pid = 0;
-//    //allocPageTable(idle);
-//    idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
+	idle = (pcb*)malloc(sizeof(pcb));
+    idle->pid = 0;
+    //allocPageTable(idle);
+    idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
 
     LoadProgram("idle",cmd_args,info);
     TracePrintf(2, "kernel_start: idle process pcb initialized.\n");
@@ -180,7 +180,6 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 }
 
 int SetKernelBrk(void *addr) {
-	TracePrintf(2, "Setting kernel brk.\n");
 	if ((unsigned long *)addr >= VMEM_1_LIMIT || (unsigned long *)addr < VMEM_1_BASE) return -1;
 	if (vir_mem == 0) {
 		kernel_cur_break = addr;
@@ -189,6 +188,7 @@ int SetKernelBrk(void *addr) {
 		// second map these new free phisical memory to page_table_1
 		// then grow kernel_brk to addr frame by frame
 		if(addr > kernel_cur_break) {
+			TracePrintf(2, "Set kernel brk: addr > kernel_cur_break \n");
 			int i;
             if ( DOWN_TO_PAGE(*(unsigned long *)addr) - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_page_num) return -1;
 			/* Given a virtual page number, assign a physical page to its corresponding pte entry */
@@ -199,6 +199,7 @@ int SetKernelBrk(void *addr) {
                 kernel_page_table[i].uprot = PROT_NONE;
 			}
 		} else {
+			TracePrintf(2, "Set kernel brk: addr <= kernel_cur_break \n");
 //			if(( *(unsigned long*)kernel_cur_break - DOWN_TO_PAGE(*(unsigned long*)addr))/PAGESIZE >=2)
 //			{
 //				for (i = 0; i < ( *(unsigned long*)kernel_cur_break - DOWN_TO_PAGE(*(unsigned long*)addr))/PAGESIZE -1;i++)
