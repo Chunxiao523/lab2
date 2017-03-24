@@ -112,12 +112,13 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 //        else pointer = pointer->next;
 //    }
 
-    TracePrintf(2, "kernel_start: free physical address list initialized.\n");
+
 	/*
      * Initialize the page table and page table register for region 1 and 0
      */
 
 	WriteRegister(REG_PTR1,(RCS421RegVal)(kernel_page_table));
+	TracePrintf(2, "kernel_start: free physical address list initialized.\n");
 	unsigned long addr;
     for (addr = VMEM_1_BASE; addr<(unsigned long)(&_etext); addr+=PAGESIZE) {
         i = (addr-VMEM_1_BASE)>>PAGESHIFT;
