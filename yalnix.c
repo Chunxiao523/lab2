@@ -34,7 +34,9 @@ typedef struct pcb {
  */
 free_page *head;
 
+int free_page_num = 0;
 
+struct pte *process_page_table;
 
 
 pcb *idle;
