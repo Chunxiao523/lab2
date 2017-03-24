@@ -206,6 +206,7 @@ LoadProgram(char *name, char **args, ExceptionInfo *info)
             process_page_table[i].uprot = PROT_READ|PROT_WRITE;
         }
      }
+    TracePrintf(0, "LoadProgram: Fill in the page table with the right number of text, data+bss, and stack pages.  \n");
     /* And finally the user stack pages */
     // >>>> For stack_npg number of PTEs in the Region 0 page table
     // >>>> corresponding to the user stack (the last page of the
