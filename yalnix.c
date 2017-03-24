@@ -92,25 +92,25 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
     /* initialize the free phys pages list */
     head = (free_page*) malloc(sizeof(free_page));
-	free_page *pointer = head;
-    for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
-        pointer->next = (free_page*) malloc(sizeof(free_page));
-        pointer = pointer->next;
-        pointer->phys_page_num = free_page_num;
-        free_page_num++;
-    }
-
-    pointer = head;
-	free_page *t;
-    while (pointer->next!=NULL) {
-        if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_page_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
-            t = pointer->next;
-            pointer->next = pointer->next->next;
-            free_page_num --;
+//	free_page *pointer = head;
+//    for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
+//        pointer->next = (free_page*) malloc(sizeof(free_page));
+//        pointer = pointer->next;
+//        pointer->phys_page_num = free_page_num;
+//        free_page_num++;
+//    }
+//
+//    pointer = head;
+//	free_page *t;
+//    while (pointer->next!=NULL) {
+//        if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_page_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
+//            t = pointer->next;
+//            pointer->next = pointer->next->next;
+//            free_page_num --;
 //            free(t);
-        }
-        else pointer = pointer->next;
-    }
+//        }
+//        else pointer = pointer->next;
+//    }
     TracePrintf(2, "kernel_start: free physical address list initialized.\n");
 	/*
      * Initialize the page table and page table register for region 1 and 0
