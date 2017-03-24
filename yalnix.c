@@ -179,6 +179,7 @@ int SetKernelBrk(void *addr) {
 		} else {
             return -1;
 		}
+		kernel_cur_break = UP_TO_PAGE(addr);
 	}
 	return 0;
 }
