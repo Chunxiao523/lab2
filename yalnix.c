@@ -121,6 +121,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	TracePrintf(2, "kernel_start: free physical address list initialized.\n");
 	unsigned long addr;
     for (addr = VMEM_1_BASE; addr<(unsigned long)(&_etext); addr+=PAGESIZE) {
+		TracePrintf(2, "haha %d.\n", addr);
         i = (addr-VMEM_1_BASE)>>PAGESHIFT;
         kernel_page_table[i].pfn = addr>>PAGESHIFT; //page frame number
         kernel_page_table[i].valid = 1;
