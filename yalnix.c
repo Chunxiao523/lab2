@@ -107,7 +107,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
             t = pointer->next;
             pointer->next = pointer->next->next;
             free_page_num --;
-            free(t);
+//            free(t);
         }
         else pointer = pointer->next;
     }
@@ -153,10 +153,10 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	/*
 	 * Create idle and init process
 	 */
-//	idle = (pcb*)malloc(sizeof(pcb));
-//    idle->pid = 0;
-//    //allocPageTable(idle);
-//    idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
+	idle = (pcb*)malloc(sizeof(pcb));
+    idle->pid = 0;
+    //allocPageTable(idle);
+    idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
 
     LoadProgram("idle",cmd_args,info);
     TracePrintf(2, "kernel_start: idle process pcb initialized.\n");
