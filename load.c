@@ -181,6 +181,7 @@ LoadProgram(char *name, char **args, ExceptionInfo *info)
     for (i = 0;i < MEM_INVALID_PAGES; i ++) {
         process_page_table[i].valid = 0;
     }
+    TracePrintf(0, "LoadProgram: Deal with invalid pages  \n");
     /* First, the text pages */
     // >>>> For the next text_npg number of PTEs in the Region 0
     // >>>> page table, initialize each PTE:
