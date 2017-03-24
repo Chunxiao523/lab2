@@ -111,38 +111,38 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 //        }
 //        else pointer = pointer->next;
 //    }
-	
+
     TracePrintf(2, "kernel_start: free physical address list initialized.\n");
 	/*
      * Initialize the page table and page table register for region 1 and 0
      */
 
 	WriteRegister(REG_PTR1,(RCS421RegVal)(kernel_page_table));
-	unsigned long addr;
-    for (addr = VMEM_1_BASE; addr<(unsigned long)(&_etext); addr+=PAGESIZE) {
-        i = (addr-VMEM_1_BASE)>>PAGESHIFT;
-        kernel_page_table[i].pfn = addr>>PAGESHIFT; //page frame number
-        kernel_page_table[i].valid = 1;
-        kernel_page_table[i].kprot = PROT_READ|PROT_EXEC;
-        kernel_page_table[i].uprot = PROT_NONE;
-    }
-    for (; addr<(unsigned long)kernel_cur_break; addr += PAGESIZE) {
-        i = (addr-VMEM_1_BASE)>>PAGESHIFT;
-        kernel_page_table[i].pfn = addr>>PAGESHIFT;
-        kernel_page_table[i].valid = 1;
-        kernel_page_table[i].kprot = PROT_READ|PROT_WRITE;
-        kernel_page_table[i].uprot = PROT_NONE;
-    }
+//	unsigned long addr;
+//    for (addr = VMEM_1_BASE; addr<(unsigned long)(&_etext); addr+=PAGESIZE) {
+//        i = (addr-VMEM_1_BASE)>>PAGESHIFT;
+//        kernel_page_table[i].pfn = addr>>PAGESHIFT; //page frame number
+//        kernel_page_table[i].valid = 1;
+//        kernel_page_table[i].kprot = PROT_READ|PROT_EXEC;
+//        kernel_page_table[i].uprot = PROT_NONE;
+//    }
+//    for (; addr<(unsigned long)kernel_cur_break; addr += PAGESIZE) {
+//        i = (addr-VMEM_1_BASE)>>PAGESHIFT;
+//        kernel_page_table[i].pfn = addr>>PAGESHIFT;
+//        kernel_page_table[i].valid = 1;
+//        kernel_page_table[i].kprot = PROT_READ|PROT_WRITE;
+//        kernel_page_table[i].uprot = PROT_NONE;
+//    }
     TracePrintf(2, "kernel_start: region 1 page table initialized.\n");
 
     WriteRegister(REG_PTR0, (RCS421RegVal)(process_page_table));
-    for (addr = KERNEL_STACK_BASE; addr <= VMEM_0_LIMIT; addr+= PAGESIZE) {
-    	i = (addr - VMEM_0_BASE)>>PAGESHIFT; //VMEM_0_BASE = 0
-    	process_page_table[i].pfn = addr>>PAGESHIFT;
-        process_page_table[i].valid = 1;
-        process_page_table[i].kprot = PROT_READ|PROT_WRITE;
-        process_page_table[i].uprot = PROT_NONE;
-    }
+//    for (addr = KERNEL_STACK_BASE; addr <= VMEM_0_LIMIT; addr+= PAGESIZE) {
+//    	i = (addr - VMEM_0_BASE)>>PAGESHIFT; //VMEM_0_BASE = 0
+//    	process_page_table[i].pfn = addr>>PAGESHIFT;
+//        process_page_table[i].valid = 1;
+//        process_page_table[i].kprot = PROT_READ|PROT_WRITE;
+//        process_page_table[i].uprot = PROT_NONE;
+//    }
     TracePrintf(2, "kernel_start: region 0 page table initialized.\n");
 
 
@@ -154,10 +154,10 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	/*
 	 * Create idle and init process
 	 */
-	idle = (pcb*)malloc(sizeof(pcb));
-    idle->pid = 0;
-    //allocPageTable(idle);
-    idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
+//	idle = (pcb*)malloc(sizeof(pcb));
+//    idle->pid = 0;
+//    //allocPageTable(idle);
+//    idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
 
     LoadProgram("idle",cmd_args,info);
     TracePrintf(2, "kernel_start: idle process pcb initialized.\n");
