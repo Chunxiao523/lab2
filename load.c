@@ -165,6 +165,8 @@ LoadProgram(char *name, char **args, ExceptionInfo *info)
             process_page_table[i].valid = 0;
         }
     }
+    TracePrintf(0, "LoadProgram: Free all the old physical memory belonging to this process \n");
+
     /*
      *  Fill in the page table with the right number of text,
      *  data+bss, and stack pages.  We set all the text pages
