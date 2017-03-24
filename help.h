@@ -1,4 +1,4 @@
-#include <comp421/hardware.h> 
+#include <comp421/hardware.h>
 #include <comp421/yalnix.h>
 #include <comp421/loadinfo.h>
 #include <stdio.h>
@@ -9,7 +9,7 @@
 
 
 typedef struct pte pte;
-extern int free_page;
+//extern int free_page;
 extern struct pte *process_page_table;
 /*
  * Linked list used to store the free physical address
