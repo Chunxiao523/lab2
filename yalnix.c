@@ -92,49 +92,40 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
     /* initialize the free phys pages list */
     head = (free_page*) malloc(sizeof(free_page));
-//	free_page *pointer = head;
-//    for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
-//        pointer->next = (free_page*) malloc(sizeof(free_page));
-//        pointer = pointer->next;
-//        pointer->phys_page_num = free_page_num;
-//        free_page_num++;
-//    }
-//
-//    pointer = head;
-//	free_page *t;
-//    while (pointer->next!=NULL) {
-//        if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_page_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
-//            t = pointer->next;
-//            pointer->next = pointer->next->next;
-//            free_page_num --;
-//            free(t);
-//        }
-//        else pointer = pointer->next;
-//    }
+	free_page *pointer = head;
+    for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
+        pointer->next = (free_page*) malloc(sizeof(free_page));
+        pointer = pointer->next;
+        pointer->phys_page_num = free_page_num;
+        free_page_num++;
+    }
+
+    pointer = head;
+	free_page *t;
+    while (pointer->next!=NULL) {
+        if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_page_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
+            t = pointer->next;
+            pointer->next = pointer->next->next;
+            free_page_num --;
+            free(t);
+        }
+        else pointer = pointer->next;
+    }
 
 
 	/*
      * Initialize the page table and page table register for region 1 and 0
      */
-
-	WriteRegister(REG_PTR1,(RCS421RegVal)(kernel_page_table));
 	TracePrintf(2, "kernel_start: free physical address list initialized.\n");
+	WriteRegister(REG_PTR1,(RCS421RegVal)(kernel_page_table));
+
 	unsigned long addr;
     for (addr = VMEM_1_BASE; addr<UP_TO_PAGE((unsigned long)(&_etext)); addr+=PAGESIZE) {
-		TracePrintf(2, "haha %d.\n", addr);
-
-		TracePrintf(2, "hahaha %d.\n", (unsigned long)(&_etext));
         i = (addr-VMEM_1_BASE)>>PAGESHIFT;
-
-		TracePrintf(2, "hahahaha %d.\n", addr>>PAGESHIFT);
         kernel_page_table[i].pfn = addr>>PAGESHIFT; //page frame number
-		TracePrintf(2, "hahahaha %d.\n", 7);
         kernel_page_table[i].valid = 1;
-		TracePrintf(2, "hahahaha %d.\n", 6);
         kernel_page_table[i].kprot = PROT_READ|PROT_EXEC;
-		TracePrintf(2, "hahahaha %d.\n", 5);
         kernel_page_table[i].uprot = PROT_NONE;
-		TracePrintf(2, "hahahahahaha\n");
     }
 
 	TracePrintf(2, "1.\n");
@@ -190,7 +181,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
 int SetKernelBrk(void *addr) {
 	TracePrintf(2, "Setting kernel brk.\n");
-//	if (*(unsigned long *)addr >= VMEM_1_LIMIT || *(unsigned long *)addr < VMEM_1_BASE) return -1;
+	if ((unsigned long *)addr >= VMEM_1_LIMIT || (unsigned long *)addr < VMEM_1_BASE) return -1;
 	if (vir_mem == 0) {
 		kernel_cur_break = addr;
 	} else {
