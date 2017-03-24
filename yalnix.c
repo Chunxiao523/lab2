@@ -62,104 +62,104 @@ void allocPageTable(pcb* p);
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, char **cmd_args) {
     unsigned int i;
 	printf("12321232123");
-//    TracePrintf(1, "kernel_start: KernelStart called with num physical pages: %d.\n", pmem_size/PAGESIZE);
-//    free_page_num = 0;
-//	kernel_cur_break = orig_brk;
-//
-//	kernel_page_table = (pte*)malloc(PAGE_TABLE_SIZE);
-//	process_page_table = (pte*)malloc(PAGE_TABLE_SIZE);
-//	/*
-//	 * Initialize the interrupt table
-//	 * You need to initialize page table entries for Region 1 for the kernel's text, data, bss, and heap,
-//	 * and for Region 0 for the kernel's stack.
-//	 * All other PTEs should be marked invalid initially.
-//	 */
-//    interrupt_handler *interrupt_vector_table = (interrupt_handler *) calloc(TRAP_VECTOR_SIZE, sizeof(interrupt_handler));
-//
-//	 interrupt_vector_table[TRAP_KERNEL] = TrapKernel;
-//	 interrupt_vector_table[TRAP_CLOCK] = TrapClock;
-//	 interrupt_vector_table[TRAP_ILLEGAL] = TrapIllegal;
-//	 interrupt_vector_table[TRAP_MEMORY] = TrapMemory;
-//	 interrupt_vector_table[TRAP_MATH] = TrapMath;
-//	 interrupt_vector_table[TRAP_TTY_RECEIVE] = TrapTTYReceive;
-//	 interrupt_vector_table[TRAP_TTY_TRANSMIT] = TrapTTYTransmit;
-//
-//	 for (i=7; i<TRAP_VECTOR_SIZE; i++) {
-//        interrupt_vector_table[i] = NULL;
-//     }
-//	WriteRegister(REG_VECTOR_BASE, (RCS421RegVal)(interrupt_vector_table));
-//    TracePrintf(2, "kernel_start: interrupt table initialized.\n");
-//
-//    /* initialize the free phys pages list */
-//    head = (free_page*) malloc(sizeof(free_page));
-//	free_page *pointer = head;
-//    for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
-//        pointer->next = (free_page*) malloc(sizeof(free_page));
-//        pointer = pointer->next;
-//        pointer->phys_page_num = free_page_num;
-//        free_page_num++;
-//    }
-//
-//    pointer = head;
-//	free_page *t;
-//    while (pointer->next!=NULL) {
-//        if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_page_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
-//            t = pointer->next;
-//            pointer->next = pointer->next->next;
-//            free_page_num --;
-//            free(t);
-//        }
-//        else pointer = pointer->next;
-//    }
-//    TracePrintf(2, "kernel_start: free physical address list initialized.\n");
-//	/*
-//     * Initialize the page table and page table register for region 1 and 0
-//     */
-//
-//	WriteRegister(REG_PTR1,(RCS421RegVal)(kernel_page_table));
-//	unsigned long addr;
-//    for (addr = VMEM_1_BASE; addr<(unsigned long)(&_etext); addr+=PAGESIZE) {
-//        i = (addr-VMEM_1_BASE)>>PAGESHIFT;
-//        kernel_page_table[i].pfn = addr>>PAGESHIFT; //page frame number
-//        kernel_page_table[i].valid = 1;
-//        kernel_page_table[i].kprot = PROT_READ|PROT_EXEC;
-//        kernel_page_table[i].uprot = PROT_NONE;
-//    }
-//    for (; addr<(unsigned long)kernel_cur_break; addr += PAGESIZE) {
-//        i = (addr-VMEM_1_BASE)>>PAGESHIFT;
-//        kernel_page_table[i].pfn = addr>>PAGESHIFT;
-//        kernel_page_table[i].valid = 1;
-//        kernel_page_table[i].kprot = PROT_READ|PROT_WRITE;
-//        kernel_page_table[i].uprot = PROT_NONE;
-//    }
-//    TracePrintf(2, "kernel_start: region 1 page table initialized.\n");
-//
-//    WriteRegister(REG_PTR0, (RCS421RegVal)(process_page_table));
-//    for (addr = KERNEL_STACK_BASE; addr <= VMEM_0_LIMIT; addr+= PAGESIZE) {
-//    	i = (addr - VMEM_0_BASE)>>PAGESHIFT; //VMEM_0_BASE = 0
-//    	process_page_table[i].pfn = addr>>PAGESHIFT;
-//        process_page_table[i].valid = 1;
-//        process_page_table[i].kprot = PROT_READ|PROT_WRITE;
-//        process_page_table[i].uprot = PROT_NONE;
-//    }
-//    TracePrintf(2, "kernel_start: region 0 page table initialized.\n");
-//
-//
-//	/* enable the virtual memory subsystem */
+    TracePrintf(1, "kernel_start: KernelStart called with num physical pages: %d.\n", pmem_size/PAGESIZE);
+    free_page_num = 0;
+	kernel_cur_break = orig_brk;
+
+	kernel_page_table = (pte*)malloc(PAGE_TABLE_SIZE);
+	process_page_table = (pte*)malloc(PAGE_TABLE_SIZE);
+	/*
+	 * Initialize the interrupt table
+	 * You need to initialize page table entries for Region 1 for the kernel's text, data, bss, and heap,
+	 * and for Region 0 for the kernel's stack.
+	 * All other PTEs should be marked invalid initially.
+	 */
+	interrupt_handler *interrupt_vector_table = (interrupt_handler *) malloc(TRAP_VECTOR_SIZE * sizeof(interrupt_handler));
+
+	 interrupt_vector_table[TRAP_KERNEL] = TrapKernel;
+	 interrupt_vector_table[TRAP_CLOCK] = TrapClock;
+	 interrupt_vector_table[TRAP_ILLEGAL] = TrapIllegal;
+	 interrupt_vector_table[TRAP_MEMORY] = TrapMemory;
+	 interrupt_vector_table[TRAP_MATH] = TrapMath;
+	 interrupt_vector_table[TRAP_TTY_RECEIVE] = TrapTTYReceive;
+	 interrupt_vector_table[TRAP_TTY_TRANSMIT] = TrapTTYTransmit;
+
+	 for (i=7; i<TRAP_VECTOR_SIZE; i++) {
+        interrupt_vector_table[i] = NULL;
+     }
+	WriteRegister(REG_VECTOR_BASE, (RCS421RegVal)(interrupt_vector_table));
+    TracePrintf(2, "kernel_start: interrupt table initialized.\n");
+
+    /* initialize the free phys pages list */
+    head = (free_page*) malloc(sizeof(free_page));
+	free_page *pointer = head;
+    for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
+        pointer->next = (free_page*) malloc(sizeof(free_page));
+        pointer = pointer->next;
+        pointer->phys_page_num = free_page_num;
+        free_page_num++;
+    }
+
+    pointer = head;
+	free_page *t;
+    while (pointer->next!=NULL) {
+        if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_page_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
+            t = pointer->next;
+            pointer->next = pointer->next->next;
+            free_page_num --;
+            free(t);
+        }
+        else pointer = pointer->next;
+    }
+    TracePrintf(2, "kernel_start: free physical address list initialized.\n");
+	/*
+     * Initialize the page table and page table register for region 1 and 0
+     */
+
+	WriteRegister(REG_PTR1,(RCS421RegVal)(kernel_page_table));
+	unsigned long addr;
+    for (addr = VMEM_1_BASE; addr<(unsigned long)(&_etext); addr+=PAGESIZE) {
+        i = (addr-VMEM_1_BASE)>>PAGESHIFT;
+        kernel_page_table[i].pfn = addr>>PAGESHIFT; //page frame number
+        kernel_page_table[i].valid = 1;
+        kernel_page_table[i].kprot = PROT_READ|PROT_EXEC;
+        kernel_page_table[i].uprot = PROT_NONE;
+    }
+    for (; addr<(unsigned long)kernel_cur_break; addr += PAGESIZE) {
+        i = (addr-VMEM_1_BASE)>>PAGESHIFT;
+        kernel_page_table[i].pfn = addr>>PAGESHIFT;
+        kernel_page_table[i].valid = 1;
+        kernel_page_table[i].kprot = PROT_READ|PROT_WRITE;
+        kernel_page_table[i].uprot = PROT_NONE;
+    }
+    TracePrintf(2, "kernel_start: region 1 page table initialized.\n");
+
+    WriteRegister(REG_PTR0, (RCS421RegVal)(process_page_table));
+    for (addr = KERNEL_STACK_BASE; addr <= VMEM_0_LIMIT; addr+= PAGESIZE) {
+    	i = (addr - VMEM_0_BASE)>>PAGESHIFT; //VMEM_0_BASE = 0
+    	process_page_table[i].pfn = addr>>PAGESHIFT;
+        process_page_table[i].valid = 1;
+        process_page_table[i].kprot = PROT_READ|PROT_WRITE;
+        process_page_table[i].uprot = PROT_NONE;
+    }
+    TracePrintf(2, "kernel_start: region 0 page table initialized.\n");
+
+
+	/* enable the virtual memory subsystem */
 	WriteRegister(REG_VM_ENABLE, 1);
-//	vir_mem = 1;
-//    TracePrintf(2, "kernel_start: virtual memory enabled.\n");
-//
-//	/*
-//	 * Create idle and init process
-//	 */
+	vir_mem = 1;
+    TracePrintf(2, "kernel_start: virtual memory enabled.\n");
+
+	/*
+	 * Create idle and init process
+	 */
 //	idle = (pcb*)malloc(sizeof(pcb));
 //    idle->pid = 0;
 //    //allocPageTable(idle);
 //    idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
-//
-//    LoadProgram("idle",cmd_args,info);
-//    TracePrintf(2, "kernel_start: idle process pcb initialized.\n");
+
+    LoadProgram("idle",cmd_args,info);
+    TracePrintf(2, "kernel_start: idle process pcb initialized.\n");
 
 }
 
