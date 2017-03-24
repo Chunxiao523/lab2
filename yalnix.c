@@ -111,6 +111,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 //        }
 //        else pointer = pointer->next;
 //    }
+	
     TracePrintf(2, "kernel_start: free physical address list initialized.\n");
 	/*
      * Initialize the page table and page table register for region 1 and 0
