@@ -120,12 +120,13 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	WriteRegister(REG_PTR1,(RCS421RegVal)(kernel_page_table));
 	TracePrintf(2, "kernel_start: free physical address list initialized.\n");
 	unsigned long addr;
-    for (addr = VMEM_1_BASE; addr<(unsigned long)(&_etext); addr+=PAGESIZE) {
+    for (addr = VMEM_1_BASE; addr<UP_TO_PAGE((unsigned long)(&_etext)); addr+=PAGESIZE) {
 		TracePrintf(2, "haha %d.\n", addr);
 
 		TracePrintf(2, "hahaha %d.\n", (unsigned long)(&_etext));
         i = (addr-VMEM_1_BASE)>>PAGESHIFT;
-		TracePrintf(2, "hahahaha %d.\n", 8);
+
+		TracePrintf(2, "hahahaha %d.\n", addr>>PAGESHIFT);
         kernel_page_table[i].pfn = addr>>PAGESHIFT; //page frame number
 		TracePrintf(2, "hahahaha %d.\n", 7);
         kernel_page_table[i].valid = 1;
@@ -138,7 +139,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
 	TracePrintf(2, "1.\n");
 
-    for (; addr<(unsigned long)kernel_cur_break; addr += PAGESIZE) {
+    for (; addr<UP_TO_PAGE((unsigned long)kernel_cur_break); addr += PAGESIZE) {
         i = (addr-VMEM_1_BASE)>>PAGESHIFT;
         kernel_page_table[i].pfn = addr>>PAGESHIFT;
         kernel_page_table[i].valid = 1;
