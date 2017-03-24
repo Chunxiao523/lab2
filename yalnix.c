@@ -185,7 +185,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 }
 
 int SetKernelBrk(void *addr) {
-	printf("1232132132");
+	TracePrintf(2, "Setting kernel brk.\n");
 	if (*(unsigned long *)addr >= VMEM_1_LIMIT || *(unsigned long *)addr < VMEM_1_BASE) return -1;
 	if (vir_mem == 0) {
 		kernel_cur_break = addr;
