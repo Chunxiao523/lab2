@@ -14,6 +14,10 @@ void *kernel_cur_break;
  */
 int vir_mem = 0;
 /*
+ * pid value
+ */
+int pid = 0;
+/*
  * Page table for the region 1
  */
 struct pte *kernel_page_table;
@@ -39,7 +43,7 @@ int free_page_num = 0;
 struct pte *process_page_table;
 
 
-pcb *idle;
+pcb *cur_Proc;
 
 void TrapKernel(ExceptionInfo *info);
 void TrapClock(ExceptionInfo *info);
@@ -61,7 +65,6 @@ void allocPageTable(pcb* p);
  */
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, char **cmd_args) {
     unsigned int i;
-	printf("12321232123");
     TracePrintf(1, "kernel_start: KernelStart called with num physical pages: %d.\n", pmem_size/PAGESIZE);
     free_page_num = 0;
 	kernel_cur_break = orig_brk;
@@ -170,11 +173,14 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	/*
 	 * Create idle and init process
 	 */
+	pcb *idle;
 	idle = (pcb*)malloc(sizeof(pcb));
-    idle->pid = 0;
+    idle->pid = pid;
+	pid ++;
     //allocPageTable(idle);
     idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
 
+	cur_Proc = idle;
     LoadProgram("idle",cmd_args,info);
     TracePrintf(2, "kernel_start: idle process pcb initialized.\n");
 
@@ -364,3 +370,13 @@ unsigned long find_free_page() {
 //        half_full=0;
 //    }
 //}
+
+int GetPid() {
+	if (cur_Proc != NULL) {
+		return cur_Proc->pid;
+	} else {
+		return -1;
+	}
+
+
+}
