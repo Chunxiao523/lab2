@@ -68,6 +68,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
 	kernel_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
 	process_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
+
 	/*
 	 * Initialize the interrupt table
 	 * You need to initialize page table entries for Region 1 for the kernel's text, data, bss, and heap,

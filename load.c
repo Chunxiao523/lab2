@@ -201,6 +201,7 @@ LoadProgram(char *name, char **args, ExceptionInfo *info)
     TracePrintf(0, "LoadProgram: text page number is %d \n", text_npg + MEM_INVALID_PAGES);
     for (; i < text_npg + MEM_INVALID_PAGES; i ++) {
             TracePrintf(0, "LoadProgram: text page %d \n", i);
+            TracePrintf(0, "LoadProgram: text page content \n", process_page_table[i].pfn);
             process_page_table[i].pfn = find_free_page();
             TracePrintf(0, "LoadProgram: find free page  \n");
             process_page_table[i].valid = 1;
