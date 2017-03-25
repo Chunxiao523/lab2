@@ -328,21 +328,12 @@ unsigned long find_free_page() {
 			TracePrintf(2, "Find Free Page: list is empty \n");
 			return 0;
 		}
-
 		free_page *tmp = head->next;
-		TracePrintf(2, "Find Free Page: finding 1 \n");
-		if (tmp->next == NULL) {
-			TracePrintf(2, "Find Free Page: finding 20!\n");
-		}
         head->next = tmp->next;
-	TracePrintf(2, "Find Free Page: finding 2\n");
         free_page_num--;
-	TracePrintf(2, "Find Free Page: finding 3 \n");
         unsigned long ret = tmp->phys_page_num;
-	TracePrintf(2, "Find Free Page: finding 4 \n");
-       // free(tmp);
-	TracePrintf(2, "Find Free Page: finding 5 \n");
-		TracePrintf(2, "Find Free Page: return number is %d \n", ret);
+        free(tmp);
+		tmp = NULL;
         return ret;
 }
 //void allocPageTable(pcb* p)
