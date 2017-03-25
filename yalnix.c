@@ -330,11 +330,15 @@ unsigned long find_free_page() {
 		}
 
 		free_page *tmp = head->next;
-		TracePrintf(2, "Find Free Page: finding \n");
+		TracePrintf(2, "Find Free Page: finding 1 \n");
         head->next = tmp->next;
+	TracePrintf(2, "Find Free Page: finding 2\n");
         free_page_num--;
+	TracePrintf(2, "Find Free Page: finding 3 \n");
         unsigned long ret = tmp->phys_page_num;
+	TracePrintf(2, "Find Free Page: finding 4 \n");
         free(tmp);
+	TracePrintf(2, "Find Free Page: finding 5 \n");
 		TracePrintf(2, "Find Free Page: return number is %d \n", ret);
         return ret;
 }
