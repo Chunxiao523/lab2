@@ -331,7 +331,7 @@ unsigned long find_free_page() {
 
 		free_page *tmp = head->next;
 		TracePrintf(2, "Find Free Page: finding 1 \n");
-		if (tmp->next == null) {
+		if (tmp->next == NULL) {
 			TracePrintf(2, "Find Free Page: finding 20!\n");
 		}
         head->next = tmp->next;
