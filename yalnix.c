@@ -328,6 +328,7 @@ unsigned long find_free_page() {
 			TracePrintf(2, "Find Free Page: list is empty \n");
 			return 0;
 		}
+		TracePrintf(2, "Find Free Page: finding \n");
 		free_page *tmp = head->next;
         head->next = tmp->next;
         free_page_num--;
