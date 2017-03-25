@@ -332,8 +332,8 @@ unsigned long find_free_page() {
         head->next = tmp->next;
         free_page_num--;
         unsigned long ret = tmp->phys_page_num;
-        free(tmp);
-		tmp = NULL;
+//        free(tmp);
+//		tmp = NULL;
         return ret;
 }
 //void allocPageTable(pcb* p)
