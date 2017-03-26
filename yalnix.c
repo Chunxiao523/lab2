@@ -54,6 +54,8 @@ void TrapTTYReceive(ExceptionInfo *info);
 void TrapTTYTransmit(ExceptionInfo *info);
 unsigned long find_free_page();
 void allocPageTable(pcb* p);
+SavedContext *MySwitchFunc(SavedContext *ctxp, void *p1, void *p2);
+int MyGetPid();
 
 /*
  * The procedure named KernelStart is automatically called by the bootstrap firmware in the computer
@@ -392,6 +394,8 @@ int MyGetPid() {
  * You should use them to point to the current process's PCB and to the PCB of the new process
  * to be context switch between these two processes
  */
-SavedContext *MySwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
-	return &((pcb *)p2)->ctx;
+SavedContext *
+MySwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
+	struct pcb *pcb_ptr2 = (struct pcb *)p2;
+	return &pcb_ptr2->ctx;
 }
