@@ -161,7 +161,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	for (addr = VMEM_0_BASE; addr<KERNEL_STACK_BASE; addr += PAGESIZE) {
 		i = (addr-VMEM_0_BASE)>>PAGESHIFT;
 		process_page_table[i].valid = 0;
-	}
+	}   
     TracePrintf(2, "kernel_start: region 0 page table initialized.\n");
 
 
