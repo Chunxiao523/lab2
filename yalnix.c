@@ -190,7 +190,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     LoadProgram("init",cmd_args,info);
     TracePrintf(2, "kernel_start: idle process pcb initialized.\n");
 
-	ContextSwitch(MySwitchFunc, &pcb1-ctx, (void *) cur_Proc, (void *) pcb2);
+	//ContextSwitch(MySwitchFunc, &pcb1-ctx, (void *) cur_Proc, (void *) pcb2);
 
 }
 
