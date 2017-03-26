@@ -179,10 +179,18 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	pid ++;
     //allocPageTable(idle);
     idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
-
 	cur_Proc = idle;
-    LoadProgram("idle",cmd_args,info);
+	pcb *init;
+	init = (pcb *) malloc(sizeof(pcb));
+	init->pid = pid;
+	pid ++;
+	init->ctx = (SavedContext *)malloc(sizeof(SavedContext));
+	cur_Proc = init;
+
+    LoadProgram("init",cmd_args,info);
     TracePrintf(2, "kernel_start: idle process pcb initialized.\n");
+
+	ContextSwitch(MySwitchFunc, &pcb1-ctx, (void *) cur_Proc, (void *) pcb2);
 
 }
 
@@ -377,6 +385,13 @@ int GetPid() {
 	} else {
 		return -1;
 	}
-
-
+}
+/*
+ * Context switch between these two processes
+ * p1 and p2 are passed to ContextSwitch will be passed unmodified to MySwitchFunc.
+ * You should use them to point to the current process's PCB and to the PCB of the new process
+ * to be context switch between these two processes
+ */
+SavedContext *MySwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
+	return &p2-ctx;
 }
