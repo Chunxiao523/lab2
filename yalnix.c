@@ -393,5 +393,5 @@ int GetPid() {
  * to be context switch between these two processes
  */
 SavedContext *MySwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
-	return (pcb*)&p2-ctx;
+	return &((pcb *)p2)-ctx;
 }
