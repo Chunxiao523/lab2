@@ -179,7 +179,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	pid ++;
     //allocPageTable(idle);
     idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
-	cur_Proc = idle;
+
 	pcb *init;
 	init = (pcb *) malloc(sizeof(pcb));
 	init->pid = pid;
@@ -190,7 +190,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     LoadProgram("init",cmd_args,info);
     TracePrintf(2, "kernel_start: idle process pcb initialized.\n");
 
-	//ContextSwitch(MySwitchFunc, &pcb1-ctx, (void *) cur_Proc, (void *) pcb2);
+	ContextSwitch(MySwitchFunc, &cur_Proc->ctx, (void *) cur_Proc, (void *) idle);
 
 }
 
