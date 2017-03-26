@@ -161,7 +161,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	for (addr = VMEM_0_BASE; addr<KERNEL_STACK_BASE; addr += PAGESIZE) {
 		i = (addr-VMEM_0_BASE)>>PAGESHIFT;
 		process_page_table[i].valid = 0;
-	}   
+	}
     TracePrintf(2, "kernel_start: region 0 page table initialized.\n");
 
 
@@ -255,7 +255,7 @@ void TrapKernel(ExceptionInfo *info) {
 				(*info).regs[0] = NULL;
 				break;
 			case YALNIX_GETPID:
-				(*info).regs[0] = NULL;
+				(*info).regs[0] = MyGetPid();
 				break;
 			case YALNIX_BRK:
 				(*info).regs[0] = NULL;
@@ -379,7 +379,7 @@ unsigned long find_free_page() {
 //    }
 //}
 
-int GetPid() {
+int MyGetPid() {
 	if (cur_Proc != NULL) {
 		return cur_Proc->pid;
 	} else {
