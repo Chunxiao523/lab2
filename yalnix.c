@@ -512,10 +512,10 @@ return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
 
-int MyDelay(int clock_ticks){
-	return 0;
-	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
-}
+//int MyDelay(int clock_ticks){
+//	return 0;
+//	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+//}
 
 int TtyRead(int tty_id, void *buf, int len) {
 	return 0;
