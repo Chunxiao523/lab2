@@ -72,7 +72,7 @@ void *va2pa(void *va);
  */
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, char **cmd_args) {
     unsigned int i;
-    TracePrintf(1, "kernel_start: KernelStart called with num physical pages: %d.\n", pmem_size/PAGESIZE);
+    TracePrintf(1, "Kernel Start: KernelStart called with num physical pages: %d.\n", pmem_size/PAGESIZE);
     free_page_num = 0;
 	kernel_cur_break = orig_brk;
 
@@ -99,7 +99,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         interrupt_vector_table[i] = NULL;
      }
 	WriteRegister(REG_VECTOR_BASE, (RCS421RegVal)(interrupt_vector_table));
-    TracePrintf(2, "kernel_start: interrupt table initialized.\n");
+    TracePrintf(2, "Kernel Start: interrupt table initialized.\n");
 
     /* initialize the free phys pages list */
     head = (free_page*) malloc(sizeof(free_page));
@@ -127,7 +127,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	/*
      * Initialize the page table and page table register for region 1 and 0
      */
-	TracePrintf(2, "kernel_start: free physical address list initialized.\n");
+	TracePrintf(2, "Kernel Start: free physical address list initialized.\n");
 	WriteRegister(REG_PTR1,(RCS421RegVal)(kernel_page_table));
 
 	unsigned long addr;
@@ -151,7 +151,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 		i = (addr-VMEM_1_BASE)>>PAGESHIFT;
 		kernel_page_table[i].valid = 0;
 	}
-    TracePrintf(2, "kernel_start: region 1 page table initialized.\n");
+    TracePrintf(2, "Kernel Start: region 1 page table initialized.\n");
 
     WriteRegister(REG_PTR0, (RCS421RegVal)(process_page_table));
     for (addr = KERNEL_STACK_BASE; addr <= VMEM_0_LIMIT; addr+= PAGESIZE) {
@@ -171,13 +171,13 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 		process_page_table[i].valid = 0;
         idle_page_table[i].valid = 0;
 	}
-    TracePrintf(2, "kernel_start: region 0 page table initialized.\n");
+    TracePrintf(2, "Kernel Start: region 0 page table initialized.\n");
 
 
 	/* enable the virtual memory subsystem */
 	WriteRegister(REG_VM_ENABLE, 1);
 	vir_mem = 1;
-    TracePrintf(2, "kernel_start: virtual memory enabled.\n");
+    TracePrintf(2, "Kernel Start: virtual memory enabled.\n");
 
 	/*
 	 * Create idle and init process
@@ -188,7 +188,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     idle->page_table = idle_page_table;
 	pid ++;
     idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
-
+    TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
 	pcb *init;
 	init = (pcb *) malloc(sizeof(pcb));
 	init->pid = pid;
@@ -198,7 +198,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	cur_Proc = init;
 
     LoadProgram("init",cmd_args,info);
-    TracePrintf(2, "kernel_start: idle process pcb initialized.\n");
+    TracePrintf(2, "Kernel Start: init process pcb initialized.\n");
 
 	ContextSwitch(MyKernelSwitchFunc, &cur_Proc->ctx, (void *) cur_Proc, (void *) idle);
 }
