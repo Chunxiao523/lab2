@@ -397,13 +397,13 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
            if (p1_pt[temp].valid == 0) {
                TracePrintf(2, "Context Switch: Copying...   %d\n", temp );
                p1_pt[temp].valid = 1;
-               p1_pt[temp].uprot = PROT_READ | PROT_WRITE;
-               p1_pt[temp].kprot = PROT_READ | PROT_EXEC;
+               p1_pt[temp].uprot = PROT_READ | PROT_EXEC;
+               p1_pt[temp].kprot = PROT_READ | PROT_WRITE;
                p1_pt[temp].pfn = p2_pfn;
 
                void *temp_addr = (void *)((temp * PAGESIZE) + VMEM_0_BASE); //virtual address to the buffer
 
-               WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) temp_addr);
+               WriteRegister(REG_TLB_FLUSH, (RCS421RegVal)temp_addr);
                TracePrintf(2, "Context Switch: 11111\n");
                // copy kernel stack page to the new physical memory
                memcpy(temp_addr, addr + VMEM_0_BASE, PAGESIZE);
