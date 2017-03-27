@@ -58,7 +58,7 @@ void TrapTTYReceive(ExceptionInfo *info);
 void TrapTTYTransmit(ExceptionInfo *info);
 unsigned long find_free_page();
 void allocPageTable(pcb* p);
-SavedContext *MySwitchFunc(SavedContext *ctxp, void *p1, void *p2);
+SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2);
 int MyGetPid();
 void *va2pa(void *va);
 
