@@ -1,8 +1,5 @@
 
 #include "help.h"
-
-
-
 /*
  * keep tracking the location of the current break for the kernel
  */
@@ -22,17 +19,25 @@ int pid = 0;
  */
 struct pte *kernel_page_table;
 /*
- * The table used to store the interrupts
+ * Page table for the region 0
  */
-typedef void (*interrupt_handler)(ExceptionInfo *info);
-/* 
+struct pte *process_page_table;
+/*
+ * Page table for idle process
+ */
+struct  pte *idle_page_table;
+/*
  * Data structure of process
  */
 typedef struct pcb {
     SavedContext *ctx;
     int pid;
+    pte * page_table;
 } pcb;
-
+/*
+ * The table used to store the interrupts
+ */
+typedef void (*interrupt_handler)(ExceptionInfo *info);
 /*
  * Linked list to store the free pages
  */
@@ -40,7 +45,6 @@ free_page *head;
 
 int free_page_num = 0;
 
-struct pte *process_page_table;
 
 
 pcb *cur_Proc;
@@ -56,6 +60,7 @@ unsigned long find_free_page();
 void allocPageTable(pcb* p);
 SavedContext *MySwitchFunc(SavedContext *ctxp, void *p1, void *p2);
 int MyGetPid();
+void *va2pa(void *va);
 
 /*
  * The procedure named KernelStart is automatically called by the bootstrap firmware in the computer
@@ -159,10 +164,16 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         process_page_table[i].valid = 1;
         process_page_table[i].kprot = PROT_READ|PROT_WRITE;
         process_page_table[i].uprot = PROT_NONE;
+
+        idle_page_table[i].pfn = addr>>PAGESHIFT;;
+        idle_page_table[i].valid = 0;
+        idle_page_table[i].kprot = PROT_NONE;
+        idle_page_table[i].uprot = PROT_NONE;
     }
 	for (addr = VMEM_0_BASE; addr<KERNEL_STACK_BASE; addr += PAGESIZE) {
 		i = (addr-VMEM_0_BASE)>>PAGESHIFT;
 		process_page_table[i].valid = 0;
+        idle_page_table[i].valid = 0;
 	}
     TracePrintf(2, "kernel_start: region 0 page table initialized.\n");
 
@@ -178,13 +189,14 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	pcb *idle;
 	idle = (pcb*)malloc(sizeof(pcb));
     idle->pid = pid;
+    idle->page_table = idle_page_table;
 	pid ++;
-    //allocPageTable(idle);
     idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
 
 	pcb *init;
 	init = (pcb *) malloc(sizeof(pcb));
 	init->pid = pid;
+    init->page_table = process_page_table;
 	pid ++;
 	init->ctx = (SavedContext *)malloc(sizeof(SavedContext));
 	cur_Proc = init;
@@ -192,8 +204,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     LoadProgram("init",cmd_args,info);
     TracePrintf(2, "kernel_start: idle process pcb initialized.\n");
 
-	ContextSwitch(MySwitchFunc, &cur_Proc->ctx, (void *) cur_Proc, (void *) idle);
-
+	ContextSwitch(MyKernelSwitchFunc, &cur_Proc->ctx, (void *) cur_Proc, (void *) idle);
 }
 
 int SetKernelBrk(void *addr) {
@@ -263,7 +274,7 @@ void TrapKernel(ExceptionInfo *info) {
 				(*info).regs[0] = NULL;
 				break;
 			case YALNIX_DELAY:
-				(*info).regs[0] = NULL;
+				(*info).regs[0] = MyDelay((int)info->regs[1]);
 				break;
 			case YALNIX_TTY_READ:
 				(*info).regs[0] = NULL;
@@ -339,6 +350,9 @@ void TrapTTYReceive(ExceptionInfo *info) {
 void TrapTTYTransmit(ExceptionInfo *info) {
 
 }
+/*
+ * Return a free page pfn from the linked list
+ */
 unsigned long find_free_page() {
         if (head->next==NULL) {
 			TracePrintf(2, "Find Free Page: list is empty \n");
@@ -348,54 +362,99 @@ unsigned long find_free_page() {
         head->next = tmp->next;
         free_page_num--;
         unsigned long ret = tmp->phys_page_num;
-//        free(tmp);
+//      free(tmp);
 //		tmp = NULL;
         return ret;
 }
-//void allocPageTable(pcb* p)
-//{
-//    if (half_full==0) {
-//        /* set appropriate virtual start address for r0 page table */
-//        p->pt_r0 = (pte*)next_PT_vaddr;
-//        next_PT_vaddr += PAGESIZE/2;
-//        half_full=1;
-//        /* get physical frame for r0 page table
-//         * set the r1 page table entry for the start address of r0 page table */
-//        unsigned long idx = ((unsigned long)(p->pt_r0)-VMEM_1_BASE)>>PAGESHIFT;
-//        if(pt_r1[idx].valid) {
-//            kernel_Exit(ERROR);
-//        }
-//        process_page_table[idx].pfn = getFreePage();
-//        process_page_table[idx].valid = 1;
-//        process_page_table[idx].kprot = PROT_READ|PROT_WRITE;
-//        process_page_table[idx].uprot = PROT_NONE;
-//    }
-//    else {
-//        /* set appropriate virtual start address for r0 page table */
-//        p->pt_r0 = (struct pte*)next_PT_vaddr;
-//        next_PT_vaddr -= PAGESIZE*3/2;
-//
-//
-//        /* whole frame is used, so clear half_full_vaddr and half_full_frame */
-//        half_full=0;
-//    }
-//}
-
-int MyGetPid() {
-	if (cur_Proc != NULL) {
-		return cur_Proc->pid;
-	} else {
-		return -1;
-	}
-}
-/*
+/************ Context switch function **********/
+/**
  * Context switch between these two processes
  * p1 and p2 are passed to ContextSwitch will be passed unmodified to MySwitchFunc.
+ * p1 is to be switched out of region 0 and p2 is to be switched into region 0
  * You should use them to point to the current process's PCB and to the PCB of the new process
  * to be context switch between these two processes
+ *
  */
-SavedContext *
-MySwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
+SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 	struct pcb *pcb_ptr2 = (struct pcb *)p2;
+    struct pcb *pcb_ptr1 = (struct pcb *)p1;
+
+    struct pte *p1_pt = pcb_ptr1->page_table;
+    struct pte *p2_pt = pcb_ptr2->page_table;
+    int i, j;
+    unsigned addr;
+
+   for(addr = KERNEL_STACK_BASE; addr <= KERNEL_STACK_LIMIT; addr += PAGESIZE) {
+       unsigned int temp;
+       unsigned long p2_pfn = find_free_page(); //physical page number to store process 2
+       for (temp = MEM_INVALID_PAGES; temp < KERNEL_STACK_BASE>>PAGESHIFT; temp++) {
+           /*
+            * Find the first invalid page in p1_pt, as a buffer to help copy the kernel stack content
+            */
+           if (p1_pt[j].valid == 0) {
+               p1_pt[j].valid = 1;
+               p1_pt[j].uprot = PROT_READ | PROT_WRITE;
+               p1_pt[j].kprot = PROT_READ | PROT_EXEC;
+               p1_pt[j].pfn = p2_pfn;
+
+
+               void *temp_addr = (void *) (long) ((temp * PAGESIZE) + VMEM_0_BASE); //virtual address to the buffer
+
+               WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) temp_addr);
+
+               // copy kernel stack page to the new physical memory
+               memcpy(
+                       temp_addr, // destination
+                       addr, //source
+                       PAGESIZE
+               );
+
+               //delete the pointer from the buffer page to the physical address
+               p1_pt[j].valid = 0;
+               WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) temp_addr);
+
+               // give the pfn from the temp memory to process 2's page table.
+               p2_pt[((addr - VMEM_0_BASE) >> PAGESHIFT)].pfn = p2_pfn;
+               break;
+           }
+       }
+    }
+
+    WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pfn));
+
+    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 	return &pcb_ptr2->ctx;
+}
+
+void *va2pa(void *va) {
+    if (DOWN_TO_PAGE(va) >= VMEM_1_BASE) {
+        return (void *)((long)kernel_page_table[(va - VMEM_1_BASE) >> PAGESHIFT].pfn * PAGESIZE + (va & PAGEOFFSET));
+    } else {
+        return (void *)((long)cur_Proc->page_table[(va - VMEM_0_BASE) >> PAGESHIFT] * PAGESIZE + (va & PAGEOFFSET));
+    }
+}
+/*************** Kernel Call ***************/
+/**
+ * Get pid kernel call
+ */
+int MyGetPid() {
+    if (cur_Proc != NULL) {
+        return cur_Proc->pid;
+    } else {
+        return -1;
+    }
+}
+/*
+ * Delay kernel call
+ */
+int MyDelay(int clock_ticks) {
+    int i;
+    if(clock_ticks<0)
+        return ERROR;
+    // currentProc->delay_clock=clock_ticks;
+    if(clock_ticks>0){
+        ContextSwitch(MyKernelSwitchFunc,currentProc->ctx,currentProc,next_ready_queue());
+    }
+
+    return 0;
 }
