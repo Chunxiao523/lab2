@@ -390,9 +390,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 
        unsigned long temp;
        unsigned long p2_pfn = find_free_page(); //physical page number to store process 2
-       for (temp = MEM_INVALID_PAGES; temp < KERNEL_STACK_BASE>>PAGESHIFT; temp++) {\
-            TracePrintf(2, "Context Switch:Find one invalid page for page %d\n", (addr - KERNEL_STACK_BASE) >> PAGESHIFT);
-
+       for (temp = MEM_INVALID_PAGES; temp < KERNEL_STACK_BASE>>PAGESHIFT; temp++) {
            /*
             * Find the first invalid page in p1_pt, as a buffer to help copy the kernel stack content
             */
@@ -402,12 +400,11 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
                p1_pt[temp].uprot = PROT_READ | PROT_WRITE;
                p1_pt[temp].kprot = PROT_READ | PROT_EXEC;
                p1_pt[temp].pfn = p2_pfn;
-               TracePrintf(2, "Context Switch: 11111\n");
 
                void *temp_addr = (void *)((temp * PAGESIZE) + VMEM_0_BASE); //virtual address to the buffer
 
                WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) temp_addr);
-
+               TracePrintf(2, "Context Switch: 11111\n");
                // copy kernel stack page to the new physical memory
                memcpy(temp_addr, addr + VMEM_0_BASE, PAGESIZE);
                TracePrintf(2, "Context Switch: Copied!\n");
