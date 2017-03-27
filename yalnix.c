@@ -494,17 +494,14 @@ int MyFork(void) {
 		return -1;
 		TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 	} else {
-        // enough pm, create the child process
-        // generate new pcb 
+
         child = (pcb*) malloc(sizeof(pcb));
-        // copy the stack context
         child->ctx = (SavedContext*) malloc(sizeof(SavedContext));
-        // initialize the child's pcb
+        allocPageTable(child);
         child->pid=pid++;
- 
+
         return 0;
         TracePrintf(0,"fork : else");
-		
     }
 }
 
@@ -540,4 +537,22 @@ int TtyRead(int tty_id, void *buf, int len) {
 int TtyWrite(int tty_id, void *buf, int len) {
 	return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+}
+
+// used to allocate physical memory for page table after valid virtual memory
+unsigned long pa_next_table;
+int half = 0; // 1 is not half
+
+void allocPageTable(pcb* p)
+{
+    if (half == 1) {
+        p->page_table = pa_next_table;
+        pa_next_table += PAGESIZE/2;
+        half = 0;
+    } else {
+        pa_next_table = find_free_page();
+        p->page_table = pa_next_table;
+        pa_next_table += PAGESIZE;
+        half = 1;
+    }
 }
