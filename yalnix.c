@@ -402,12 +402,12 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
                p1_pt[j].uprot = PROT_READ | PROT_WRITE;
                p1_pt[j].kprot = PROT_READ | PROT_EXEC;
                p1_pt[j].pfn = p2_pfn;
-
+               TracePrintf(2, "Context Switch: 11111\n");
 
                void *temp_addr = (void *) (long) ((temp * PAGESIZE) + VMEM_0_BASE); //virtual address to the buffer
 
                WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) temp_addr);
-
+               TracePrintf(2, "Context Switch: 22222\n");
                // copy kernel stack page to the new physical memory
                memcpy(
                        temp_addr, // destination
