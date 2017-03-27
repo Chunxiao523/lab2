@@ -154,7 +154,12 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     TracePrintf(2, "Kernel Start: region 1 page table initialized.\n");
 
     WriteRegister(REG_PTR0, (RCS421RegVal)(process_page_table));
-    for (addr = KERNEL_STACK_BASE; addr <= VMEM_0_LIMIT; addr+= PAGESIZE) {
+    for (addr = VMEM_0_BASE; addr< KERNEL_STACK_BASE; addr += PAGESIZE) {
+        i = (addr-VMEM_0_BASE)>>PAGESHIFT;
+        process_page_table[i].valid = 0;
+        idle_page_table[i].valid = 0;
+    }
+    for (addr = KERNEL_STACK_BASE; addr < VMEM_0_LIMIT; addr+= PAGESIZE) {
     	i = (addr - VMEM_0_BASE)>>PAGESHIFT; //VMEM_0_BASE = 0
         TracePrintf(2, "Kernel Start: kernel stack number %d\n", i);
     	process_page_table[i].pfn = addr>>PAGESHIFT;
@@ -167,11 +172,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         idle_page_table[i].kprot = PROT_NONE;
         idle_page_table[i].uprot = PROT_NONE;
     }
-	for (addr = VMEM_0_BASE; addr< KERNEL_STACK_BASE; addr += PAGESIZE) {
-		i = (addr-VMEM_0_BASE)>>PAGESHIFT;
-		process_page_table[i].valid = 0;
-        idle_page_table[i].valid = 0;
-	}
+
     TracePrintf(2, "Kernel Start: region 0 page table initialized.\n");
 
 
