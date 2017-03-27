@@ -62,7 +62,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2);
 int MyGetPid();
 void *va2pa(void *va);
 
-/*
+/**
  * The procedure named KernelStart is automatically called by the bootstrap firmware in the computer
  * initialize your operating system kernel and then return. 
  * *info. a pointer to an initial ExceptionInfo structure
@@ -206,7 +206,9 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     TracePrintf(2, "Kernel Start: Context Switch finished.\n");
 
 }
-
+/**
+ * SetKernelBrk
+ */
 int SetKernelBrk(void *addr) {
 	if ((unsigned long *)addr >= VMEM_1_LIMIT || (unsigned long *)addr < VMEM_1_BASE) return -1;
 	if (vir_mem == 0) {
@@ -234,7 +236,7 @@ int SetKernelBrk(void *addr) {
 	}
 	return 0;
 }
-/* 
+/**
  * execute the requested the requested kernel call,
  * as indicated by the kernel call number in the code field of the ExceptionInfo
  */
@@ -336,7 +338,7 @@ void TrapTTYReceive(ExceptionInfo *info) {
 void TrapTTYTransmit(ExceptionInfo *info) {
 
 }
-/*
+/**
  * Return a free page pfn from the linked list
  */
 unsigned long find_free_page() {
@@ -403,6 +405,9 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 
                // give the pfn from the temp memory to process 2's page table.
                p2_pt[((addr - VMEM_0_BASE) >> PAGESHIFT)].pfn = p2_pfn;
+               p2_pt[((addr - VMEM_0_BASE) >> PAGESHIFT)].valid = 1;
+               p2_pt[((addr - VMEM_0_BASE) >> PAGESHIFT)].kprot = PROT_READ|PROT_WRITE;
+               p2_pt[((addr - VMEM_0_BASE) >> PAGESHIFT)].uprot = PROT_NONE;
 
                break;
            }
