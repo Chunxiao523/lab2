@@ -156,6 +156,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     WriteRegister(REG_PTR0, (RCS421RegVal)(process_page_table));
     for (addr = KERNEL_STACK_BASE; addr <= VMEM_0_LIMIT; addr+= PAGESIZE) {
     	i = (addr - VMEM_0_BASE)>>PAGESHIFT; //VMEM_0_BASE = 0
+        TracePrintf(2, "Kernel Start: kernel stack number %d\n", i);
     	process_page_table[i].pfn = addr>>PAGESHIFT;
         process_page_table[i].valid = 1;
         process_page_table[i].kprot = PROT_READ|PROT_WRITE;
