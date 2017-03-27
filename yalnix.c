@@ -424,7 +424,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pt)); // Set the register for region 0
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt);
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", va2pa(p2_pt));
-    TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt[508].valid);
+//    TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt[508].valid);
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0); // flush
     TracePrintf(2, "Context Switch: finish context switch\n");
 
@@ -439,10 +439,10 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 void *va2pa(void *va) {
     if (DOWN_TO_PAGE(va) >= VMEM_1_BASE) {
         TracePrintf(2, "Va to Pa: Virtual address in region 1\n");
-        return (void *)((long)kernel_page_table[((long)va - VMEM_1_BASE) >> PAGESHIFT].pfn * PAGESIZE + ((long)va & PAGEOFFSET));
+        return (void *)((long)kernel_page_table[((long)DOWN_TO_PAGE(va) - VMEM_1_BASE) >> PAGESHIFT].pfn) ;
     } else {
         TracePrintf(2, "Va to Pa: Virtual address in region 0\n");
-        return (void *)((long)cur_Proc->page_table[((long)va - VMEM_0_BASE) >> PAGESHIFT].pfn * PAGESIZE + ((long)va & PAGEOFFSET));
+        return (void *)((long)cur_Proc->page_table[((long)DOWN_TO_PAGE(va) - VMEM_0_BASE) >> PAGESHIFT].pfn);
     }
 }
 
