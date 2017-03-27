@@ -368,15 +368,16 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     struct pte *p1_pt = pcb_ptr1->page_table;
     struct pte *p2_pt = pcb_ptr2->page_table;
     int i;
-    unsigned addr;
+    unsigned long addr;
     TracePrintf(2, "Context Switch: Process 1 and Process 2 page table initialized, begin loop\n");
 
    for(i = 0; i <KERNEL_STACK_PAGES; i ++) {
-       addr = KERNEL_STACK_BASE + i * PAGESIZE;
+       addr = KERNEL_STACK_BASE + i * PAGESIZE + VMEM_0_BASE;
        TracePrintf(2, "Context Switch: Working with %d kernel stack page\n", addr  >> PAGESHIFT);
 
        unsigned long temp;
        unsigned long p2_pfn = find_free_page(); //physical page number to store process 2
+       TracePrintf(2, "Context Switch: physical address %d \n", p2_pfn);
        for (temp = MEM_INVALID_PAGES; temp < KERNEL_STACK_BASE>>PAGESHIFT; temp++) {
            /*
             * Find the first invalid page in p1_pt, as a buffer to help copy the kernel stack content
@@ -388,11 +389,11 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
                p1_pt[temp].kprot = PROT_READ | PROT_WRITE;
                p1_pt[temp].pfn = p2_pfn;
 
-               void *temp_addr = (void *)((temp * PAGESIZE) + VMEM_0_BASE); //virtual address to the buffer
+               void *temp_addr = (void *)((temp * PAGESIZE) + VMEM_0_BASE); //virtual address to the buffer pte
 
                WriteRegister(REG_TLB_FLUSH, (RCS421RegVal)temp_addr);
 
-               memcpy(temp_addr, addr + VMEM_0_BASE, PAGESIZE); // copy kernel stack page to the new physical memory
+               memcpy(temp_addr, (void *)addr, PAGESIZE); // copy kernel stack page to the new physical memory
                TracePrintf(2, "Context Switch: Copied!\n");
 
                p1_pt[temp].valid = 0; //delete the pointer from the buffer page to the physical address
@@ -409,6 +410,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
   //  p2_pt[508].valid = 1;
     WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pt)); // Set the register for region 0
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt[508].pfn);
+
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt[508].valid);
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0); // flush
     TracePrintf(2, "Context Switch: finish context switch\n");
