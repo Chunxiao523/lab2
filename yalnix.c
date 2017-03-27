@@ -404,12 +404,11 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
                void *temp_addr = (void *)((temp * PAGESIZE) + VMEM_0_BASE); //virtual address to the buffer
 
                WriteRegister(REG_TLB_FLUSH, (RCS421RegVal)temp_addr);
-               TracePrintf(2, "Context Switch: 11111\n");
-               // copy kernel stack page to the new physical memory
-               memcpy(temp_addr, addr + VMEM_0_BASE, PAGESIZE);
+
+               memcpy(temp_addr, addr + VMEM_0_BASE, PAGESIZE); // copy kernel stack page to the new physical memory
                TracePrintf(2, "Context Switch: Copied!\n");
-               //delete the pointer from the buffer page to the physical address
-               p1_pt[temp].valid = 0;
+
+               p1_pt[temp].valid = 0; //delete the pointer from the buffer page to the physical address
                WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) temp_addr);
 
                // give the pfn from the temp memory to process 2's page table.
@@ -420,9 +419,8 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 
     }
 
-    WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pt));
-
-    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+    WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pt)); // Set the register for region 0
+    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0); // flush
 	return &pcb_ptr2->ctx;
 }
 
