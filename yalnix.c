@@ -427,8 +427,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt[508].valid);
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0); // flush
     TracePrintf(2, "Context Switch: finish context switch\n");
-    TracePrintf(2, "Context Switch: finish context switch  %s\n", &p2 -> ctx);
-    TracePrintf(2, "Context Switch: finish context switch  %s\n", &pcb_ptr2 -> ctx);
+  
 	return &pcb_ptr2->ctx;
 }
 /**
