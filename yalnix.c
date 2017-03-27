@@ -418,9 +418,10 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
                break;
            }
        }
+
     }
 
-    WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pfn));
+    WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pt));
 
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 	return &pcb_ptr2->ctx;
@@ -428,9 +429,9 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 
 void *va2pa(void *va) {
     if (DOWN_TO_PAGE(va) >= VMEM_1_BASE) {
-        return (void *)((long)kernel_page_table[(va - VMEM_1_BASE) >> PAGESHIFT].pfn * PAGESIZE + (va & PAGEOFFSET));
+        return (void *)((long)kernel_page_table[((long)va - VMEM_1_BASE) >> PAGESHIFT].pfn * PAGESIZE + (va & PAGEOFFSET));
     } else {
-        return (void *)((long)cur_Proc->page_table[(va - VMEM_0_BASE) >> PAGESHIFT] * PAGESIZE + (va & PAGEOFFSET));
+        return (void *)((long)cur_Proc->page_table[((long)va - VMEM_0_BASE) >> PAGESHIFT] * PAGESIZE + (va & PAGEOFFSET));
     }
 }
 /*************** Kernel Call ***************/
@@ -453,7 +454,7 @@ int MyDelay(int clock_ticks) {
         return ERROR;
     // currentProc->delay_clock=clock_ticks;
     if(clock_ticks>0){
-        ContextSwitch(MyKernelSwitchFunc,currentProc->ctx,currentProc,next_ready_queue());
+     //   ContextSwitch(MyKernelSwitchFunc,cur_Proc->ctx,cur_Proc,next_ready_queue());
     }
 
     return 0;
