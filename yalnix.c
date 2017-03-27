@@ -189,14 +189,14 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     idle->pid = pid;
     idle->page_table = idle_page_table;
 	pid ++;
-    idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
+  //  idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
     TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
 	pcb *init;
 	init = (pcb *) malloc(sizeof(pcb));
 	init->pid = pid;
     init->page_table = process_page_table;
 	pid ++;
-	init->ctx = (SavedContext *)malloc(sizeof(SavedContext));
+//	init->ctx = (SavedContext *)malloc(sizeof(SavedContext));
 	cur_Proc = init;
 
     LoadProgram("init",cmd_args,info);
@@ -427,7 +427,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt[508].valid);
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0); // flush
     TracePrintf(2, "Context Switch: finish context switch\n");
-   
+
 	return &pcb_ptr2->ctx;
 }
 /**
