@@ -166,7 +166,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         idle_page_table[i].kprot = PROT_NONE;
         idle_page_table[i].uprot = PROT_NONE;
     }
-	for (addr = VMEM_0_BASE; addr<KERNEL_STACK_BASE; addr += PAGESIZE) {
+	for (addr = VMEM_0_BASE; addr< KERNEL_STACK_BASE; addr += PAGESIZE) {
 		i = (addr-VMEM_0_BASE)>>PAGESHIFT;
 		process_page_table[i].valid = 0;
         idle_page_table[i].valid = 0;
@@ -372,7 +372,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     TracePrintf(2, "Context Switch: Process 1 and Process 2 page table initialized, begin loop\n");
 
    for(addr = KERNEL_STACK_BASE; addr <= KERNEL_STACK_LIMIT; addr += PAGESIZE) {
-       TracePrintf(2, "Context Switch: Working with %d kernel stack page\n", (addr - KERNEL_STACK_BASE) >> PAGESHIFT);
+       TracePrintf(2, "Context Switch: Working with %d kernel stack page\n", addr  >> PAGESHIFT);
 
        unsigned long temp;
        unsigned long p2_pfn = find_free_page(); //physical page number to store process 2
@@ -408,6 +408,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     p2_pt[508].valid = 1;
     WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pt)); // Set the register for region 0
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt[508].pfn);
+    TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt[508].valid);
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0); // flush
     TracePrintf(2, "Context Switch: finish context switch\n");
 	return &pcb_ptr2->ctx;
