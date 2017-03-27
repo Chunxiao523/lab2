@@ -224,25 +224,11 @@ int SetKernelBrk(void *addr) {
                 kernel_page_table[i].kprot = PROT_READ|PROT_WRITE;
                 kernel_page_table[i].uprot = PROT_NONE;
 			}
+            kernel_cur_break = UP_TO_PAGE(addr);
 		} else {
-			TracePrintf(2, "Set kernel brk: addr <= kernel_cur_break \n");
-//			if(( *(unsigned long*)kernel_cur_break - DOWN_TO_PAGE(*(unsigned long*)addr))/PAGESIZE >=2)
-//			{
-//				for (i = 0; i < ( *(unsigned long*)kernel_cur_break - DOWN_TO_PAGE(*(unsigned long*)addr))/PAGESIZE -1;i++)
-//				{
-//					int tmp = kernel_page_table[(*(unsigned long*)kernel_cur_break-VMEM_1_BASE)/PAGESIZE-1].pfn;
-//					*(int *)(*(unsigned long*)kernel_cur_break - PAGESIZE) = -1;
-//					kernel_page_table[(*(unsigned long*)kernel_cur_break-VMEM_1_BASE)/PAGESIZE-1].pfn = nPF;
-//					WriteRegister(REG_TLB_FLUSH,*(unsigned long*)kernel_brk-PAGESIZE);
-//					*(int *)(*(unsigned long*)kernel_brk - PAGESIZE) = tmp;
-//					nPF = tmp;
-//					numOfFPF++;
-//					PTR1[(*(unsigned long*)kernel_brk-VMEM_1_BASE)/PAGESIZE-1].valid = 0;
-//					*(unsigned long*)kernel_brk -= PAGESIZE;
-//				}
-//			}
-		}
-		kernel_cur_break = UP_TO_PAGE(addr);
+            TracePrintf(2, "Set kernel brk: addr <= kernel_cur_break, This is not supposed to happen \n");
+            return -1;
+        }
 	}
 	return 0;
 }
@@ -422,7 +408,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 
     WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pt)); // Set the register for region 0
     TracePrintf(2, "Context Switch: Set the register for region 0\n");
-    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL); // flush
+    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0); // flush
     TracePrintf(2, "Context Switch: finish context switch\n");
 	return &pcb_ptr2->ctx;
 }
@@ -445,7 +431,7 @@ int MyGetPid() {
         return -1;
     }
 }
-/*
+/**
  * Delay kernel call
  */
 int MyDelay(int clock_ticks) {
