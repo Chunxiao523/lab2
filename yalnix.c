@@ -414,7 +414,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
                        addr, //source
                        PAGESIZE
                );
-
+               TracePrintf(2, "Context Switch: Copied!\n");
                //delete the pointer from the buffer page to the physical address
                p1_pt[j].valid = 0;
                WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) temp_addr);
