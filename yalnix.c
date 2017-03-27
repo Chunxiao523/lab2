@@ -381,7 +381,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 
     struct pte *p1_pt = pcb_ptr1->page_table;
     struct pte *p2_pt = pcb_ptr2->page_table;
-    int i, j;
+    int i;
     unsigned addr;
     TracePrintf(2, "Context Switch: Process 1 and Process 2 page table initialized, begin loop\n");
 
@@ -396,12 +396,12 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
            /*
             * Find the first invalid page in p1_pt, as a buffer to help copy the kernel stack content
             */
-           if (p1_pt[j].valid == 0) {
-               TracePrintf(2, "Context Switch: Copying...\n");
-               p1_pt[j].valid = 1;
-               p1_pt[j].uprot = PROT_READ | PROT_WRITE;
-               p1_pt[j].kprot = PROT_READ | PROT_EXEC;
-               p1_pt[j].pfn = p2_pfn;
+           if (p1_pt[temp].valid == 0) {
+               TracePrintf(2, "Context Switch: Copying...   %d\n", temp );
+               p1_pt[temp].valid = 1;
+               p1_pt[temp].uprot = PROT_READ | PROT_WRITE;
+               p1_pt[temp].kprot = PROT_READ | PROT_EXEC;
+               p1_pt[temp].pfn = p2_pfn;
                TracePrintf(2, "Context Switch: 11111\n");
 
                void *temp_addr = (void *)((temp * PAGESIZE) + VMEM_0_BASE); //virtual address to the buffer
