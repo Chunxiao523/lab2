@@ -421,7 +421,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 
     }
   //  p2_pt[508].valid = 1;
-    WriteRegister(REG_PTR0, (RCS421RegVal)virt_addr_to_phys_addr(p2_pt)); // Set the register for region 0
+    WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pt)); // Set the register for region 0
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt);
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", virt_addr_to_phys_addr(p2_pt));
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt[508].valid);
@@ -438,8 +438,10 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
  */
 void *va2pa(void *va) {
     if (DOWN_TO_PAGE(va) >= VMEM_1_BASE) {
+        TracePrintf(2, "Va to Pa: Virtual address in region 1\n");
         return (void *)((long)kernel_page_table[((long)va - VMEM_1_BASE) >> PAGESHIFT].pfn * PAGESIZE + ((long)va & PAGEOFFSET));
     } else {
+        TracePrintf(2, "Va to Pa: Virtual address in region 0\n");
         return (void *)((long)cur_Proc->page_table[((long)va - VMEM_0_BASE) >> PAGESHIFT].pfn * PAGESIZE + ((long)va & PAGEOFFSET));
     }
 }
@@ -457,9 +459,9 @@ virt_addr_to_phys_addr(void *virt_addr) {
         vpn = ((long)virt_page_base - VMEM_1_BASE)/PAGESIZE;
         pfn = kernel_page_table[vpn].pfn;
     } else {
-        vpn = (long)virt_page_base/PAGESIZE;
-        struct schedule_item *current = get_head();
-        pfn = current->pcb->page_table[vpn].pfn;
+//        vpn = (long)virt_page_base/PAGESIZE;
+//       // struct schedule_item *current = get_head();
+//        pfn = current->pcb->page_table[vpn].pfn;
     }
 
     phys_page_base = (void *) (long) (pfn * PAGESIZE);
