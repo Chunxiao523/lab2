@@ -413,6 +413,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 
                // give the pfn from the temp memory to process 2's page table.
                p2_pt[((addr - VMEM_0_BASE) >> PAGESHIFT)].pfn = p2_pfn;
+
                break;
            }
        }
@@ -420,7 +421,9 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     }
 
     WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pt)); // Set the register for region 0
+    TracePrintf(2, "Context Switch: Set the register for region 0\n");
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0); // flush
+    TracePrintf(2, "Context Switch: finish context switch\n");
 	return &pcb_ptr2->ctx;
 }
 
