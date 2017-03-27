@@ -429,9 +429,9 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 
 void *va2pa(void *va) {
     if (DOWN_TO_PAGE(va) >= VMEM_1_BASE) {
-        return (void *)((long)kernel_page_table[((long)va - VMEM_1_BASE) >> PAGESHIFT].pfn * PAGESIZE + (va & PAGEOFFSET));
+        return (void *)((long)kernel_page_table[((long)va - VMEM_1_BASE) >> PAGESHIFT].pfn * PAGESIZE + ((long)va & PAGEOFFSET));
     } else {
-        return (void *)((long)cur_Proc->page_table[((long)va - VMEM_0_BASE) >> PAGESHIFT] * PAGESIZE + (va & PAGEOFFSET));
+        return (void *)((long)cur_Proc->page_table[((long)va - VMEM_0_BASE) >> PAGESHIFT] * PAGESIZE + ((long)va & PAGEOFFSET));
     }
 }
 /*************** Kernel Call ***************/
