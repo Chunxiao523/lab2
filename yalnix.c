@@ -451,3 +451,76 @@ int MyDelay(int clock_ticks) {
 
     return 0;
 }
+
+/* input args: nond
+ * return val: process ID for parent process, 0 for child process
+ * child process's address is a copy of parent process's address space, the copy should include
+ * neccessary information from parent process's pcb such as ctx*/
+int MyFork(void) {
+	int child_pid;
+	unsigned long i;
+    pcb* parent;
+    parent = cur_Proc;
+    pcb* child;
+
+    // find out the used page count for the parent process
+    int used_pgn_count = 0;
+    int count;
+    for (count = 0; count < PAGE_TABLE_LEN; count++) {
+        if (parent->page_table[count].valid) {
+            used_pgn_count++;
+        }
+    }
+
+    // check if there is enough physical mem for the child
+	if (used_pgn_count > free_page_num) {
+		return -1;
+		TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+	} else {
+        // enough pm, create the child process
+        // generate new pcb 
+        child = (pcb*) malloc(sizeof(pcb));
+        // copy the stack context
+        child->ctx = (SavedContext*) malloc(sizeof(SavedContext));
+        // initialize the child's pcb
+        child->pid=pid++;
+ 
+        return 0;
+        TracePrintf(0,"fork : else");
+		
+    }
+}
+
+
+int MyExec(char *filename, char **argvec) {
+return 0;
+	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+}
+
+void MyExit(int status){
+ return 0;
+	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+}
+
+int MyWait(int *status_ptr) {
+return 0;
+	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+}
+
+int MyDelay(int clock_ticks){
+	return 0;
+	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+}
+
+int TtyRead(int tty_id, void *buf, int len) {
+	return 0;
+	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+}
+
+/*Write the contents of the buffer referenced by buf to the terminal tty_id. The length of the buffer in bytes is given by len
+
+*/
+int TtyWrite(int tty_id, void *buf, int len) {
+	return 0;
+	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+}
