@@ -371,7 +371,8 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     unsigned addr;
     TracePrintf(2, "Context Switch: Process 1 and Process 2 page table initialized, begin loop\n");
 
-   for(addr = KERNEL_STACK_BASE; addr <= KERNEL_STACK_LIMIT; addr += PAGESIZE) {
+   for(i = 0; i <KERNEL_STACK_PAGES; i ++) {
+       addr = KERNEL_STACK_BASE + i * PAGESIZE;
        TracePrintf(2, "Context Switch: Working with %d kernel stack page\n", addr  >> PAGESHIFT);
 
        unsigned long temp;
@@ -405,7 +406,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
        }
 
     }
-    p2_pt[508].valid = 1;
+  //  p2_pt[508].valid = 1;
     WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pt)); // Set the register for region 0
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt[508].pfn);
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt[508].valid);
