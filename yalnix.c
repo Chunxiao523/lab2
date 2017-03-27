@@ -372,11 +372,11 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     struct pte *p1_pt = pcb_ptr1->page_table;
     struct pte *p2_pt = pcb_ptr2->page_table;
 
-    void *ret_addr = memcpy((void *)pcb_ptr2->ctx, (void *)ctxp, sizeof(SavedContext));
-    if(ret_addr != (void *)pcb_ptr2->ctx){
-        fprintf(stderr,"switchAddressSpace: SavedContext copy failed!\n");
-        return ctxp;
-    }
+//    void *ret_addr = memcpy((void *)pcb_ptr2->ctx, (void *)ctxp, sizeof(SavedContext));
+//    if(ret_addr != (void *)pcb_ptr2->ctx){
+//        fprintf(stderr,"switchAddressSpace: SavedContext copy failed!\n");
+//        return ctxp;
+//    }
     int i;
     unsigned long addr;
     TracePrintf(2, "Context Switch: Process 1 and Process 2 page table initialized, begin loop\n");
