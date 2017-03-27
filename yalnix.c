@@ -409,7 +409,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
                WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) temp_addr);
 
                // copy kernel stack page to the new physical memory
-               memcpy(temp_addr, addr + VEME_0_BASE, PAGESIZE);
+               memcpy(temp_addr, addr + VMEM_0_BASE, PAGESIZE);
                TracePrintf(2, "Context Switch: Copied!\n");
                //delete the pointer from the buffer page to the physical address
                p1_pt[j].valid = 0;
