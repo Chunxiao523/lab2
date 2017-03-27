@@ -201,6 +201,8 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     TracePrintf(2, "Kernel Start: init process pcb initialized.\n");
 
 	ContextSwitch(MyKernelSwitchFunc, &cur_Proc->ctx, (void *) cur_Proc, (void *) idle);
+    TracePrintf(2, "Kernel Start: Context Switch finished.\n");
+
 }
 
 int SetKernelBrk(void *addr) {
@@ -372,15 +374,20 @@ unsigned long find_free_page() {
  *
  */
 SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
-	struct pcb *pcb_ptr2 = (struct pcb *)p2;
+    TracePrintf(2, "Context Switch: ***************** Begining Context Switch!!!*****************\n");
+
+    struct pcb *pcb_ptr2 = (struct pcb *)p2;
     struct pcb *pcb_ptr1 = (struct pcb *)p1;
 
     struct pte *p1_pt = pcb_ptr1->page_table;
     struct pte *p2_pt = pcb_ptr2->page_table;
     int i, j;
     unsigned addr;
+    TracePrintf(2, "Context Switch: Process 1 and Process 2 page table initialized, begin loop\n");
 
    for(addr = KERNEL_STACK_BASE; addr <= KERNEL_STACK_LIMIT; addr += PAGESIZE) {
+       TracePrintf(2, "Context Switch: Working with %d kernel stack page\n", (addr - KERNEL_STACK_BASE) >> PAGESHIFT);
+
        unsigned int temp;
        unsigned long p2_pfn = find_free_page(); //physical page number to store process 2
        for (temp = MEM_INVALID_PAGES; temp < KERNEL_STACK_BASE>>PAGESHIFT; temp++) {
