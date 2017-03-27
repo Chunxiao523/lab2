@@ -405,7 +405,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
                TracePrintf(2, "Context Switch: 11111\n");
 
                void *temp_addr = (void *) (long) ((temp * PAGESIZE) + VMEM_0_BASE); //virtual address to the buffer
-
+               TracePrintf(2, "Context Switch: aaaaa\n");
                WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) temp_addr);
                TracePrintf(2, "Context Switch: 22222\n");
                // copy kernel stack page to the new physical memory
