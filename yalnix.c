@@ -422,7 +422,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     }
   //  p2_pt[508].valid = 1;
     WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pt)); // Set the register for region 0
-    TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", va2pa(p2_pt));
+    TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt);
 
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt[508].valid);
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0); // flush
