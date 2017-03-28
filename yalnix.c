@@ -521,18 +521,22 @@ int MyFork(void) {
 		return -1;
 		TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 	} else {
-        // create a new pcb for child, copy savedcontext and creat a new page table
+        // create a new pcb for child, create a new savecontext and page table of region 0
         child = (pcb*) malloc(sizeof(pcb));
         child->ctx = (SavedContext*) malloc(sizeof(SavedContext));
         allocPageTable(child);
+        // create a new pid for child
         child->pid=pid++;
-
+        // copy content of parent to child: savedcontext and page table in the context switch
+        ContextSwitch(switch_fork(),parent->ctx, (void*) parent, (void*) child);
+        // run the child 
+        cur_Proc = child;
         return 0;
         TracePrintf(0,"fork : else");
     }
 
-    ContextSwitch(parent->ctx,parent,child);
     
+
 }
 
 
@@ -594,3 +598,20 @@ void allocPageTable(pcb* p)
         half = 1;
     }
 }
+
+SavedContext *switch_fork(SavedContext *ctx, void *p1, void *p2) {
+    // copy the page table from p1 to p2
+    struct pte* pt2 = ((pcb*) p2)->page_table;
+    struct pte* pt1 = ((pcb*) p1)->page_table;
+    int i;
+    memcpy((void*)(pt2),(void *)(pt1),PAGE_TABLE_SIZE);//XXX
+    for(i=0; i<PAGE_TABLE_LEN; i++) {
+        if (pt2[i].valid) {
+            pt2[i].pfn = find_free_page();
+        }
+    }
+    WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
+    memcpy(((pcb*) p2)->ctx, ((pcb*) p1)->ctx, sizeof(SavedContext));
+    return ((pcb*)p2)->ctx;
+}
+
