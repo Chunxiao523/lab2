@@ -516,7 +516,7 @@ int MyFork(void) {
 		return -1;
 		TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 	} else {
-
+        // create a new pcb for child, copy savedcontext and creat a new page table
         child = (pcb*) malloc(sizeof(pcb));
         child->ctx = (SavedContext*) malloc(sizeof(SavedContext));
         allocPageTable(child);
@@ -525,6 +525,9 @@ int MyFork(void) {
         return 0;
         TracePrintf(0,"fork : else");
     }
+
+    ContextSwitch(parent->ctx,parent,child);
+    
 }
 
 
@@ -533,7 +536,15 @@ return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
 
+/*
+kernel call for terminalling a process
+para: the status of this process
+if a child is terminate, it report status to its wait parent
+if a parent is terminate, its child's parent become null
+when a process exit, its resourses should be freed
+*/
 void MyExit(int status){
+
  return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
