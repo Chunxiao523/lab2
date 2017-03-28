@@ -168,10 +168,10 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         process_page_table[i].kprot = PROT_READ|PROT_WRITE;
         process_page_table[i].uprot = PROT_NONE;
 
-//        idle_page_table[i].pfn = addr>>PAGESHIFT;;
-//        idle_page_table[i].valid = 0;
-//        idle_page_table[i].kprot = PROT_NONE;
-//        idle_page_table[i].uprot = PROT_NONE;
+        idle_page_table[i].pfn = addr>>PAGESHIFT;;
+        idle_page_table[i].valid = 0;
+        idle_page_table[i].kprot = PROT_NONE;
+        idle_page_table[i].uprot = PROT_NONE;
     }
 
     TracePrintf(2, "Kernel Start: region 0 page table initialized.\n");
@@ -424,7 +424,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 
     // update globale variables, and load idle
     cur_Proc = (pcb *)pcb_ptr2;
-    memcpy(((pcb *)pcb_ptr2)->ctx, ((pcb *)pcb_ptr1)->ctx, sizeof(SavedContext));
+//    memcpy(((pcb *)pcb_ptr2)->ctx, ((pcb *)pcb_ptr1)->ctx, sizeof(SavedContext));
 //    memcpy(((pcb *)p2)->ctx, ((pcb *)p1)->ctx, sizeof(SavedContext));
 	return pcb_ptr1->ctx;
 //    return ((pcb *)p2)->ctx;
