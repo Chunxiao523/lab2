@@ -27,7 +27,7 @@
  *  in this case.
  */
 int
-LoadProgram(char *name, char **args, ExceptionInfo *info)
+LoadProgram(char *name, char **args, ExceptionInfo *info, struct pte *process_page_table)
 {
     int fd;
     int status;
@@ -148,7 +148,7 @@ LoadProgram(char *name, char **args, ExceptionInfo *info)
     // >>>> Initialize sp for the current process to (char *)cpp.
     // >>>> The value of cpp was initialized above.
     info->sp = (char *)cpp;
-    TracePrintf(0, "LoadProgram: sp was set \n");
+    TracePrintf(0, "LoadProgram: sp was set， %d \n", info->sp);
     /*
      *  Free all the old physical memory belonging to this process,
      *  but be sure to leave the kernel stack for this process (which

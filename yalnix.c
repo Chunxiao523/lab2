@@ -107,8 +107,8 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
         pointer->next = (free_page*) malloc(sizeof(free_page));
         pointer = pointer->next;
-        pointer->phys_page_num = free_page_num;
         free_page_num++;
+        pointer->phys_page_num = free_page_num;
     }
 
     pointer = head;
@@ -190,21 +190,22 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     idle->pid = pid;
     idle->page_table = idle_page_table;
 	pid ++;
-  //  idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
+    idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
     TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
 	pcb *init;
 	init = (pcb *) malloc(sizeof(pcb));
 	init->pid = pid;
     init->page_table = process_page_table;
 	pid ++;
-//	init->ctx = (SavedContext *)malloc(sizeof(SavedContext));
+	init->ctx = (SavedContext *)malloc(sizeof(SavedContext));
 	cur_Proc = init;
 
-    LoadProgram("init",cmd_args,info);
+    LoadProgram("init",cmd_args,info, process_page_table);
     TracePrintf(2, "Kernel Start: init process pcb initialized.\n");
 
-	ContextSwitch(MyKernelSwitchFunc, &cur_Proc->ctx, (void *) cur_Proc, (void *) idle);
+	ContextSwitch(MyKernelSwitchFunc, init->ctx, (void *) cur_Proc, (void *) idle);
     TracePrintf(2, "Kernel Start: Context Switch finished.\n");
+    LoadProgram("idle",cmd_args,info, idle->page_table);
 
 }
 /**
@@ -373,11 +374,6 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     struct pte *p1_pt = pcb_ptr1->page_table;
     struct pte *p2_pt = pcb_ptr2->page_table;
 
-//    void *ret_addr = memcpy((void *)pcb_ptr2->ctx, (void *)ctxp, sizeof(SavedContext));
-//    if(ret_addr != (void *)pcb_ptr2->ctx){
-//        fprintf(stderr,"switchAddressSpace: SavedContext copy failed!\n");
-//        return ctxp;
-//    }
     int i;
     unsigned long addr;
     TracePrintf(2, "Context Switch: Process 1 and Process 2 page table initialized, begin loop\n");
@@ -415,20 +411,24 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
                p2_pt[((addr - VMEM_0_BASE) >> PAGESHIFT)].valid = 1;
                p2_pt[((addr - VMEM_0_BASE) >> PAGESHIFT)].kprot = PROT_READ|PROT_WRITE;
                p2_pt[((addr - VMEM_0_BASE) >> PAGESHIFT)].uprot = PROT_NONE;
-
                break;
            }
        }
 
     }
   //  p2_pt[508].valid = 1;
-    WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pt)); // Set the register for region 0
+    WriteRegister(REG_PTR0, (RCS421RegVal)p2_pt); // Set the register for region 0
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt);
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", va2pa(p2_pt));
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0); // flush
     TracePrintf(2, "Context Switch: finish context switch\n");
 
-	return &pcb_ptr2->ctx;
+    // update globale variables, and load idle
+    cur_Proc = (pcb *)pcb_ptr2;
+    memcpy(((pcb *)pcb_ptr2)->ctx, ((pcb *)pcb_ptr1)->ctx, sizeof(SavedContext));
+//    memcpy(((pcb *)p2)->ctx, ((pcb *)p1)->ctx, sizeof(SavedContext));
+	return pcb_ptr2->ctx;
+//    return ((pcb *)p2)->ctx;
 }
 /**
  * Function to map virtual address to physical address
@@ -535,6 +535,7 @@ int MyFork(void) {
         TracePrintf(0,"fork : else");
     }
 
+
     
 
 }
@@ -614,4 +615,5 @@ SavedContext *switch_fork(SavedContext *ctx, void *p1, void *p2) {
     memcpy(((pcb*) p2)->ctx, ((pcb*) p1)->ctx, sizeof(SavedContext));
     return ((pcb*)p2)->ctx;
 }
+
 
