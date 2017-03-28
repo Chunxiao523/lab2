@@ -200,10 +200,10 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	init->ctx = (SavedContext *)malloc(sizeof(SavedContext));
 	cur_Proc = init;
 
-    LoadProgram("init",cmd_args,info);
+    LoadProgram("init",cmd_args,info, process_page_table);
     TracePrintf(2, "Kernel Start: init process pcb initialized.\n");
 
-	ContextSwitch(MyKernelSwitchFunc, cur_Proc->ctx, (void *) cur_Proc, (void *) idle);
+	ContextSwitch(MyKernelSwitchFunc, idle->ctx, (void *) cur_Proc, (void *) idle);
     TracePrintf(2, "Kernel Start: Context Switch finished.\n");
 
 }
