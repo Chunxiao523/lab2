@@ -422,7 +422,26 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", va2pa(p2_pt));
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0); // flush
     TracePrintf(2, "Context Switch: finish context switch\n");
-    LoadProgram("idle",cmd_args,info, p2_pt);
+
+    // update globale variables, and load idle
+    cur_Proc = (pcb *)pcb_ptr2;
+  //  push_ready_queue((PCB *)temp_init);
+ //   region_0_pt = temp_idle_pt_va;
+
+// copy the SavedContext, since the address is in region 1, can directly copy
+    memcpy(((pcb *)pcb_ptr2)->ctx, ((pcb *)pcb_ptr1)->ctx, sizeof(SavedContext));
+
+// Load the idle process from disk
+  //  printf("Loadprogram idle_process.... \n");
+//    char *idle_process = "idle";
+  //  LoadProgram(idle_process, current_cmd_args);
+
+
+
+
+
+
+   // LoadProgram("idle",cmd_args,info, p2_pt);
 	return &pcb_ptr2->ctx;
 }
 /**
@@ -589,3 +608,6 @@ void allocPageTable(pcb* p)
         half = 1;
     }
 }
+
+
+
