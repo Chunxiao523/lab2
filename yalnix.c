@@ -168,10 +168,10 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         process_page_table[i].kprot = PROT_READ|PROT_WRITE;
         process_page_table[i].uprot = PROT_NONE;
 
-        idle_page_table[i].pfn = addr>>PAGESHIFT;;
-        idle_page_table[i].valid = 0;
-        idle_page_table[i].kprot = PROT_NONE;
-        idle_page_table[i].uprot = PROT_NONE;
+//        idle_page_table[i].pfn = addr>>PAGESHIFT;;
+//        idle_page_table[i].valid = 0;
+//        idle_page_table[i].kprot = PROT_NONE;
+//        idle_page_table[i].uprot = PROT_NONE;
     }
 
     TracePrintf(2, "Kernel Start: region 0 page table initialized.\n");
