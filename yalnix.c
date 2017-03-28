@@ -416,7 +416,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 
     }
   //  p2_pt[508].valid = 1;
-    WriteRegister(REG_PTR0, (RCS421RegVal)va2pa(p2_pt)); // Set the register for region 0
+    WriteRegister(REG_PTR0, (RCS421RegVal)p2_pt); // Set the register for region 0
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt);
     TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", va2pa(p2_pt));
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0); // flush
@@ -424,9 +424,9 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 
     // update globale variables, and load idle
     cur_Proc = (pcb *)pcb_ptr2;
-//    memcpy(((pcb *)pcb_ptr2)->ctx, ((pcb *)pcb_ptr1)->ctx, sizeof(SavedContext));
+    memcpy(((pcb *)pcb_ptr2)->ctx, ((pcb *)pcb_ptr1)->ctx, sizeof(SavedContext));
 //    memcpy(((pcb *)p2)->ctx, ((pcb *)p1)->ctx, sizeof(SavedContext));
-	return pcb_ptr1->ctx;
+	return pcb_ptr2->ctx;
 //    return ((pcb *)p2)->ctx;
 }
 /**
