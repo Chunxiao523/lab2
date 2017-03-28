@@ -526,7 +526,7 @@ int MyFork(void) {
         TracePrintf(0,"fork : else");
     }
 
-    ContextSwitch(parent->ctx,parent,child);
+   // ContextSwitch(parent->ctx,parent,child);
     
 }
 
