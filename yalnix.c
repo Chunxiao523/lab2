@@ -107,8 +107,8 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
         pointer->next = (free_page*) malloc(sizeof(free_page));
         pointer = pointer->next;
-        pointer->phys_page_num = free_page_num;
         free_page_num++;
+        pointer->phys_page_num = free_page_num;
     }
 
     pointer = head;
@@ -426,7 +426,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     cur_Proc = (pcb *)pcb_ptr2;
     memcpy(((pcb *)pcb_ptr2)->ctx, ((pcb *)pcb_ptr1)->ctx, sizeof(SavedContext));
 //    memcpy(((pcb *)p2)->ctx, ((pcb *)p1)->ctx, sizeof(SavedContext));
-	return &pcb_ptr1->ctx;
+	return pcb_ptr1->ctx;
 //    return ((pcb *)p2)->ctx;
 }
 /**
