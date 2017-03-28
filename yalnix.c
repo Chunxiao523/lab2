@@ -426,7 +426,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     cur_Proc = (pcb *)pcb_ptr2;
     memcpy(((pcb *)pcb_ptr2)->ctx, ((pcb *)pcb_ptr1)->ctx, sizeof(SavedContext));
 //    memcpy(((pcb *)p2)->ctx, ((pcb *)p1)->ctx, sizeof(SavedContext));
-	return pcb_ptr1->ctx;
+	return &pcb_ptr1->ctx;
 //    return ((pcb *)p2)->ctx;
 }
 /**
