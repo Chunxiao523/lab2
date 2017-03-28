@@ -190,14 +190,14 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     idle->pid = pid;
     idle->page_table = idle_page_table;
 	pid ++;
-  //  idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
+    idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
     TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
 	pcb *init;
 	init = (pcb *) malloc(sizeof(pcb));
 	init->pid = pid;
     init->page_table = process_page_table;
 	pid ++;
-//	init->ctx = (SavedContext *)malloc(sizeof(SavedContext));
+	init->ctx = (SavedContext *)malloc(sizeof(SavedContext));
 	cur_Proc = init;
 
     LoadProgram("init",cmd_args,info);
@@ -373,11 +373,6 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     struct pte *p1_pt = pcb_ptr1->page_table;
     struct pte *p2_pt = pcb_ptr2->page_table;
 
-//    void *ret_addr = memcpy((void *)pcb_ptr2->ctx, (void *)ctxp, sizeof(SavedContext));
-//    if(ret_addr != (void *)pcb_ptr2->ctx){
-//        fprintf(stderr,"switchAddressSpace: SavedContext copy failed!\n");
-//        return ctxp;
-//    }
     int i;
     unsigned long addr;
     TracePrintf(2, "Context Switch: Process 1 and Process 2 page table initialized, begin loop\n");
