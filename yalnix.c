@@ -36,20 +36,22 @@ typedef struct pcb {
     int child_num;
     int clock_ticks;
     struct pcb *parent;
-    struct pcb *next;
+    struct pcb *readynext;
+    struct pcb *delaynext;
     struct proc_queue *status_queue;
 } pcb;
 
 pcb *cur_Proc;
 pcb *idle;
 pcb *init;
-// FIFO structure to store the read queue
-struct proc_queue{
-    struct pcb *head;
-    struct pcb *tail;
-};
-struct proc_queue *ready_queue;
-struct proc_queue *delay_queue;
+/*
+ * Head of the delay queue
+ */
+pcb *delayQ;
+/*
+ * Head of the ready queue
+ */
+pcb *readyQ;
 
 struct status_queue{
     int pid;
@@ -113,8 +115,10 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	process_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
     idle_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
 
-    ready_queue = (proc_queue)malloc(sizeof(proc_queue));
-    delay_queue = (proc_queue)malloc(sizeof(proc_queue));
+    readyQ = (pcb *)malloc(sizeof(pcb));
+    delayQ = (pcb *)malloc(sizeof(pcb));
+    readyQ->readynext = NULL;
+    delayQ->delaynext = NULL;
 	/*
 	 * Initialize the interrupt table
 	 * You need to initialize page table entries for Region 1 for the kernel's text, data, bss, and heap,
@@ -312,7 +316,19 @@ void TrapKernel(ExceptionInfo *info) {
 		}
 }
 void TrapClock(ExceptionInfo *info) {
-
+    TracePrintf(2, "Kernel call: Trap clock\n");
+    pcb *temp = delayQ;
+    while (temp->delaynext != NULL){
+        temp->delaynext->clock_ticks --;
+        if(temp->clock_ticks == 0) {
+            //add to ready queue
+            add_readyQ(temp->delaynext);
+            temp -> delaynext = temp->delaynext->delaynext;
+        }else {
+            temp = temp->delaynext;
+        }
+    }
+    ContextSwitch(clockSwitch, cur_Proc->ctx, cur_Proc, readyQ);
 }
 void TrapIllegal(ExceptionInfo *info) {
 	 printf("[TRAP_ILLEGAL] Trapped Illegal Instruction, pid %d\n", 0);
@@ -462,20 +478,33 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     }
   //  p2_pt[508].valid = 1;
     WriteRegister(REG_PTR0, (RCS421RegVal)p2_pt); // Set the register for region 0
-    TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt);
-    TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", va2pa(p2_pt));
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0); // flush
     TracePrintf(2, "Context Switch: finish context switch\n");
 
     // update globale variables, and load idle
     cur_Proc = (pcb *)pcb_ptr2;
     memcpy(((pcb *)pcb_ptr2)->ctx, ((pcb *)pcb_ptr1)->ctx, sizeof(SavedContext));
-//    memcpy(((pcb *)p2)->ctx, ((pcb *)p1)->ctx, sizeof(SavedContext));
 	return pcb_ptr2->ctx;
-//    return ((pcb *)p2)->ctx;
 }
 SavedContext *delayContextSwitch(SavedContext *ctxp, void *p1, void *p2){
-
+    if(ready_queue->head == NULL) {
+        WriteRegister(REG_PTR0, (RCS421RegVal)idle->page_table); // Set the register for region 0
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+        cur_Proc = idle;
+    } else {
+        WriteRegister(REG_PTR0, (RCS421RegVal)((pcb *)p2->page_table)); // Set the register for region 0
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+        cur_Proc = ((pcb *)p2);
+    }
+    return cur_Proc->ctx;
+}
+SavedContent *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
+    if (p2 != NULL) {
+        rWriteRegister(REG_PTR0, (RCS421RegVal)((pcb *) p2)->page_table); // Set the register for region 0
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+        cur_Proc = ((pcb *) p2);
+    }
+    return cur_Proc->ctx;
 }
 /**
  * Function to map virtual address to physical address
@@ -513,9 +542,9 @@ int MyDelay(int clock_ticks) {
         return ERROR;
      cur_Proc->clock_ticks=clock_ticks;
     if(clock_ticks>0){
-        ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,ready_queue->head);
+        ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,readyQ);
+        add_delayQ(cur_Proc);
     }
-
     return 0;
 }
 
@@ -684,5 +713,23 @@ pcb *dequeue(struct proc_queue *queue) {
     queue->head = queue->head->next;
     nextNode->next = NULL;
     return nextNode;
+}
+
+void add_readyQ(pcb *p) {
+    pcb *temp = readyQ;
+    while(temp != NULL) {
+        temp = temp->readynext;
+    }
+    temp->readynext = p;
+    p->readynext = NULL;
+}
+void add_delayQ(pcb *p) {
+    // Add Current Process to the tail of delayQ
+    pcb *temp = delayQ;
+    while(temp->delaynext != NULL) {
+        temp = temp->delaynext;
+    }
+    cur_Proc->delaynext = temp->next;
+    temp->delaynext = cur_Proc;
 }
 
