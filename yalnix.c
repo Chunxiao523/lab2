@@ -245,7 +245,6 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	ContextSwitch(MyKernelSwitchFunc, init->ctx, (void *) cur_Proc, (void *) idle);
     TracePrintf(2, "Kernel Start: Context Switch finished.\n");
     LoadProgram("idle",cmd_args,info, idle->page_table);
-
 }
 /**
  * SetKernelBrk
@@ -650,7 +649,7 @@ int MyWait(int *status_ptr) {
 return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
- 
+
 /*Read the next line of input (or a portion of it) from terminal tty_id, copying the bytes of input into the buffer referenced by buf. 
 The maximum length of the line to be returned is given by len. A value of 0 for len is not in itself an error, as this simply means to 
 read “nothing” from the terminal. The line returned in the buffer is not null-terminated.
@@ -681,8 +680,7 @@ int TtyWrite(int tty_id, void *buf, int len) {
 unsigned long pa_next_table;
 int half = 0; // 1 is not half
 
-void allocPageTable(pcb* p)
-{
+void allocPageTable(pcb* p) {
     if (half == 1) {
         p->page_table = pa_next_table;
         pa_next_table += PAGESIZE/2;
@@ -694,7 +692,6 @@ void allocPageTable(pcb* p)
         half = 1;
     }
 }
-
 
 void enqueue(struct proc_queue *queue, pcb *p) {
     if (queue->head == NULL)
