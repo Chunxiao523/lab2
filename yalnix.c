@@ -36,6 +36,7 @@ typedef struct pcb {
     int child_num;
     struct pcb *parent;
     struct pcb *next;
+    struct proc_queue *status_queue;
 } pcb;
 
 // FIFO structure to store the read queue
@@ -43,6 +44,12 @@ struct proc_queue{
     struct pcb *head;
     struct pcb *tail;
 };
+
+struct status_queue{
+    int pid;
+    int status;
+
+}
 
 struct proc_queque *ready_queue;
 
@@ -348,10 +355,19 @@ void TrapMath(ExceptionInfo *info) {
 
 }
 void TrapTTYReceive(ExceptionInfo *info) {
+    //use TtyReceive to write line into buf in region 1, which return the acutual char
+    int tty_id = info->code;
+    int char_num;
+    char_num = TtyReceive(tty_id, buf, TERMINAL_MAX_LINE);
+
+    if (terms[tty_id].readQueue!= NULL) {
+        ContextSwitch(, cur_Proc->ctx, cur_Proc, ready_queue);
+    }
 
 }
 void TrapTTYTransmit(ExceptionInfo *info) {
-
+    int tty_id = info->code;
+    ContextSwitch();
 }
 /**
  * Return a free page pfn from the linked list
@@ -541,7 +557,7 @@ int MyFork(void) {
         // create a new pid for child
         child->pid=pid++;
         // copy content of parent to child: savedcontext and page table in the context switch
-        ContextSwitch(switch_fork(),parent->ctx, (void*) parent, (void*) child);
+        ContextSwitch(switch_fork,parent->ctx, (void*) parent, (void*) child);
         // run the child 
         cur_Proc = child;
         return 0;
@@ -558,8 +574,8 @@ int MyExec(char *filename, char **argvec, ExceptionInfo *info, struct pte *proce
     status = LoadProgram(filename, argvec, info, process_page_table);
     if (status == -1)
         return ERROR;
-    if (status == -2)
-        MyExit(ERROR);
+    // if (status == -2)
+        // MyExit(ERROR);
     return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
@@ -574,23 +590,37 @@ when a process exit, its resourses should be freed
 void MyExit(int status){
     struct pcb *next_Proc;
 
-    // if it is idle, idle would never exit
-    if (cur_Proc->pid == 0)
-        return
+    // // if it is idle, idle would never exit
+    // if (cur_Proc->pid == 0)
+    //     return
 
-    // if it is init
-    if (cur_Proc->pid == 1) 
-        Halt();
+    // // if it is init
+    // if (cur_Proc->pid == 1) 
+    //     Halt();
 
-    // find the next process to run
-    cur_Proc = next_Proc;
+    // // find the next process to run
+    // cur_Proc = next_Proc;
     // next_Proc = 
 
  return ;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
 
+/*
+
+Collect the process ID and exit status returned by a child process of the calling program. When a child process Exits, 
+its exit status information is added to a FIFO queue of child processes not yet collected by its specific parent. After the Wait 
+call, this child process information is removed from the queue. If the calling process has no remaining child processes (exited or 
+running), ERROR is returned instead as the result of the Wait call and the integer pointed to by status_ptr is not modified. Otherwise, 
+if there are no exited child processes waiting for collection by this calling process, the calling process is blocked until its next child 
+calls exits or is terminated by the kernel (if a process is terminated by the kernel, its exit status should appear to its parent as ERROR). 
+On success, the Wait call returns the process ID of the child process and that child’s exit status is copied to the integer pointed to 
+by the status_ptr argument. On any error, this call instead returns ERROR.
+*/
 int MyWait(int *status_ptr) {
+    int return_pid;
+
+
 
 return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
@@ -601,7 +631,21 @@ return 0;
 //	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 //}
 
+
+/*Read the next line of input (or a portion of it) from terminal tty_id, copying the bytes of input into the buffer referenced by buf. 
+The maximum length of the line to be returned is given by len. A value of 0 for len is not in itself an error, as this simply means to 
+read “nothing” from the terminal. The line returned in the buffer is not null-terminated.
+The calling process is blocked until a line of input is available to be returned. If the length of the next available input line is longer 
+than len bytes, only the first len bytes of the line are copied to the calling process’s buffer, and the remaining bytes of the line are
+ saved by the kernel for the next TtyRead (by this or another process) for this terminal. If the length of the next available input line 
+ is shorter than len bytes, only as many bytes are copied to the calling process’s buffer as are available in the input line. On success, 
+ the number of bytes actually copied into the calling process’s buffer is returned; in case of any error, the value ERROR is returned.
+ */
+
 int TtyRead(int tty_id, void *buf, int len) {
+    if (len < 0 || buf == NULL)
+        return ERROR;
+
 	return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
