@@ -650,7 +650,7 @@ int MyWait(int *status_ptr) {
 return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
-
+ 
 /*Read the next line of input (or a portion of it) from terminal tty_id, copying the bytes of input into the buffer referenced by buf. 
 The maximum length of the line to be returned is given by len. A value of 0 for len is not in itself an error, as this simply means to 
 read “nothing” from the terminal. The line returned in the buffer is not null-terminated.
