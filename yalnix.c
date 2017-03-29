@@ -35,14 +35,17 @@ typedef struct pcb {
     pte * page_table;
     int child_num;
     struct *parent;
+    pcb *next;
 } pcb;
 
 // FIFO structure to store the read queue
 struct proc_queue{
     struct pcb *head;
     struct pcb *tail;
-    long proc_cnt;
+    long cnt;
 }
+
+proc_queque *ready_queue;
 
 
 /*
@@ -646,4 +649,21 @@ SavedContext *switch_fork(SavedContext *ctx, void *p1, void *p2) {
     return ((pcb*)p2)->ctx;
 }
 
+void enqueue(proc_queque *queue, pcb *p) {
+    if (queue.head == NULL)
+        queue.head = p;
+    else 
+        queue.end->next = p;
+    queue.end = p;
+    p->next = NULL;
+}
 
+pcb *dequeue(proc_queque *queue) {
+    pcb *nextNode;
+    if (queue.head == NULL) 
+        return NULL;
+    nextNode = queue.head;
+    queue.head = queue.head->next;
+    nextNode->next = NULL;
+    return nextNode;
+}
