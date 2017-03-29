@@ -693,24 +693,24 @@ void allocPageTable(pcb* p) {
     }
 }
 
-void enqueue(struct proc_queue *queue, pcb *p) {
-    if (queue->head == NULL)
-        queue->head = p;
-    else 
-        queue->tail->next = p;
-    queue->tail = p;
-    p->next = NULL;
-}
-
-pcb *dequeue(struct proc_queue *queue) {
-    pcb *nextNode;
-    if (queue->head == NULL) 
-        return NULL;
-    nextNode = queue->head;
-    queue->head = queue->head->next;
-    nextNode->next = NULL;
-    return nextNode;
-}
+//void enqueue(struct proc_queue *queue, pcb *p) {
+//    if (queue->head == NULL)
+//        queue->head = p;
+//    else
+//        queue->tail->next = p;
+//    queue->tail = p;
+//    p->next = NULL;
+//}
+//
+//pcb *dequeue(struct proc_queue *queue) {
+//    pcb *nextNode;
+//    if (queue->head == NULL)
+//        return NULL;
+//    nextNode = queue->head;
+//    queue->head = queue->head->next;
+//    nextNode->next = NULL;
+//    return nextNode;
+//}
 
 void add_readyQ(pcb *p) {
     pcb *temp = readyQ;
