@@ -34,23 +34,27 @@ typedef struct pcb {
     int pid;
     pte * page_table;
     int child_num;
+    int clock_ticks;
     struct pcb *parent;
     struct pcb *next;
     struct proc_queue *status_queue;
 } pcb;
 
+pcb *cur_Proc;
+pcb *idle;
+pcb *init;
 // FIFO structure to store the read queue
 struct proc_queue{
     struct pcb *head;
     struct pcb *tail;
 };
+struct proc_queue *ready_queue;
+struct proc_queue *delay_queue;
 
 struct status_queue{
     int pid;
     int status;
 };
-
-struct proc_queque *ready_queue;
 
 /*
  * The table used to store the interrupts
@@ -77,9 +81,6 @@ struct terminal
     char *writeBuffer;
 };
 terminal terms[NUM_TERMINALS];
-
-
-pcb *cur_Proc;
 
 void TrapKernel(ExceptionInfo *info);
 void TrapClock(ExceptionInfo *info);
@@ -111,6 +112,9 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	kernel_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
 	process_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
     idle_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
+
+    ready_queue = (proc_queue)malloc(sizeof(proc_queue));
+    delay_queue = (proc_queue)malloc(sizeof(proc_queue));
 	/*
 	 * Initialize the interrupt table
 	 * You need to initialize page table entries for Region 1 for the kernel's text, data, bss, and heap,
@@ -217,14 +221,13 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	/*
 	 * Create idle and init process
 	 */
-	pcb *idle;
 	idle = (pcb*)malloc(sizeof(pcb));
     idle->pid = pid;
     idle->page_table = idle_page_table;
 	pid ++;
     idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
     TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
-	pcb *init;
+
 	init = (pcb *) malloc(sizeof(pcb));
 	init->pid = pid;
     init->page_table = process_page_table;
@@ -471,6 +474,9 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 	return pcb_ptr2->ctx;
 //    return ((pcb *)p2)->ctx;
 }
+SavedContext *delayContextSwitch(SavedContext *ctxp, void *p1, void *p2){
+
+}
 /**
  * Function to map virtual address to physical address
  * (used in context switch)
@@ -505,9 +511,9 @@ int MyDelay(int clock_ticks) {
     int i;
     if(clock_ticks<0)
         return ERROR;
-    // currentProc->delay_clock=clock_ticks;
+     cur_Proc->clock_ticks=clock_ticks;
     if(clock_ticks>0){
-     //   ContextSwitch(MyKernelSwitchFunc,cur_Proc->ctx,cur_Proc,next_ready_queue());
+        ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,ready_queue->head);
     }
 
     return 0;
@@ -616,12 +622,6 @@ return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
 
-//int MyDelay(int clock_ticks){
-//	return 0;
-//	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
-//}
-
-
 /*Read the next line of input (or a portion of it) from terminal tty_id, copying the bytes of input into the buffer referenced by buf. 
 The maximum length of the line to be returned is given by len. A value of 0 for len is not in itself an error, as this simply means to 
 read “nothing” from the terminal. The line returned in the buffer is not null-terminated.
@@ -685,3 +685,4 @@ pcb *dequeue(struct proc_queue *queue) {
     nextNode->next = NULL;
     return nextNode;
 }
+
