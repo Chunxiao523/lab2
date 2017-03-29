@@ -500,7 +500,7 @@ SavedContext *delayContextSwitch(SavedContext *ctxp, void *p1, void *p2){
 }
 SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
     if (p2 != NULL) {
-        rWriteRegister(REG_PTR0, (RCS421RegVal)((pcb *) p2)->page_table); // Set the register for region 0
+        WriteRegister(REG_PTR0, (RCS421RegVal)((pcb *) p2)->page_table); // Set the register for region 0
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
         cur_Proc = ((pcb *)p2);
     }
