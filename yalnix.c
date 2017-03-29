@@ -578,7 +578,7 @@ int MyFork(void) {
         allocPageTable(child);
         child->pid=pid++;
         // copy content of parent to child: savedcontext and page table in the context switch
-        ContextSwitch(switch_fork,parent->ctx, (void*) parent, (void*) child);
+    //    ContextSwitch(switch_fork,parent->ctx, (void*) parent, (void*) child);
         // run the child 
         cur_Proc = child;
         return 0;
