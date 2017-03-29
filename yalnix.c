@@ -82,7 +82,7 @@ struct terminal
     int readed;
     char *writeBuffer;
 };
-terminal terms[NUM_TERMINALS];
+//terminal terms[NUM_TERMINALS];
 
 void TrapKernel(ExceptionInfo *info);
 void TrapClock(ExceptionInfo *info);
@@ -94,6 +94,7 @@ void TrapTTYTransmit(ExceptionInfo *info);
 unsigned long find_free_page();
 void allocPageTable(pcb* p);
 SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2);
+SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2);
 int MyGetPid();
 void *va2pa(void *va);
 
@@ -386,18 +387,18 @@ void TrapMath(ExceptionInfo *info) {
 }
 void TrapTTYReceive(ExceptionInfo *info) {
     //use TtyReceive to write line into buf in region 1, which return the acutual char
-    int tty_id = info->code;
-    int char_num;
-    char_num = TtyReceive(tty_id, buf, TERMINAL_MAX_LINE);
-
-    if (terms[tty_id].readQueue!= NULL) {
-    //    ContextSwitch(, cur_Proc->ctx, cur_Proc, ready_queue);
-    }
+//    int tty_id = info->code;
+//    int char_num;
+//    char_num = TtyReceive(tty_id, buf, TERMINAL_MAX_LINE);
+//
+//    if (terms[tty_id].readQueue!= NULL) {
+//    //    ContextSwitch(, cur_Proc->ctx, cur_Proc, ready_queue);
+//    }
 
 }
 void TrapTTYTransmit(ExceptionInfo *info) {
     int tty_id = info->code;
-    ContextSwitch();
+ //   ContextSwitch();
 }
 /**
  * Return a free page pfn from the linked list
@@ -486,7 +487,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
 	return pcb_ptr2->ctx;
 }
 SavedContext *delayContextSwitch(SavedContext *ctxp, void *p1, void *p2){
-    if(ready_queue->head == NULL) {
+    if(readyQ == NULL) {
         WriteRegister(REG_PTR0, (RCS421RegVal)idle->page_table); // Set the register for region 0
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
         cur_Proc = idle;
@@ -497,11 +498,11 @@ SavedContext *delayContextSwitch(SavedContext *ctxp, void *p1, void *p2){
     }
     return cur_Proc->ctx;
 }
-SavedContent *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
+SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
     if (p2 != NULL) {
-        rWriteRegister(REG_PTR0, (RCS421RegVal)((pcb *) p2)->page_table); // Set the register for region 0
+        rWriteRegister(REG_PTR0, (RCS421RegVal)((pcb *) p2->page_table)); // Set the register for region 0
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-        cur_Proc = ((pcb *) p2);
+        cur_Proc = ((pcb *)p2);
     }
     return cur_Proc->ctx;
 }
