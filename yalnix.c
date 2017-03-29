@@ -34,18 +34,17 @@ typedef struct pcb {
     int pid;
     pte * page_table;
     int child_num;
-    struct *parent;
-    pcb *next;
+    struct pcb *parent;
+    struct pcb *next;
 } pcb;
 
 // FIFO structure to store the read queue
 struct proc_queue{
     struct pcb *head;
     struct pcb *tail;
-    long cnt;
-}
+};
 
-proc_queque *ready_queue;
+struct proc_queque *ready_queue;
 
 
 /*
@@ -587,7 +586,7 @@ void MyExit(int status){
     cur_Proc = next_Proc;
     // next_Proc = 
 
- return 0;
+ return ;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
 
@@ -649,21 +648,21 @@ SavedContext *switch_fork(SavedContext *ctx, void *p1, void *p2) {
     return ((pcb*)p2)->ctx;
 }
 
-void enqueue(proc_queque *queue, pcb *p) {
-    if (queue.head == NULL)
-        queue.head = p;
+void enqueue(struct proc_queue *queue, pcb *p) {
+    if (queue->head == NULL)
+        queue->head = p;
     else 
-        queue.end->next = p;
-    queue.end = p;
+        queue->tail->next = p;
+    queue->tail = p;
     p->next = NULL;
 }
 
-pcb *dequeue(proc_queque *queue) {
+pcb *dequeue(struct proc_queue *queue) {
     pcb *nextNode;
-    if (queue.head == NULL) 
+    if (queue->head == NULL) 
         return NULL;
-    nextNode = queue.head;
-    queue.head = queue.head->next;
+    nextNode = queue->head;
+    queue->head = queue->head->next;
     nextNode->next = NULL;
     return nextNode;
 }
