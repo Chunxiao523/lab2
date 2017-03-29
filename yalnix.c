@@ -53,7 +53,6 @@ struct status_queue{
 
 struct proc_queque *ready_queue;
 
-
 /*
  * The table used to store the interrupts
  */
@@ -65,6 +64,20 @@ free_page *head;
 
 int free_page_num = 0;
 
+/*
+define the terminals, which holds the read queue, write queue, readbuffer, writebuffer for each terms
+*/
+struct terminal
+{
+    pcb *readQ_head;
+    pcb *readQ_tail;
+    pcb *writeQ_head;
+    pcb *writeQ_tail;
+    char *readBuffer;
+    int readed;
+    char *writeBuffer;
+};
+terminal terms[NUM_TERMINALS];
 
 
 pcb *cur_Proc;
@@ -475,30 +488,6 @@ void *va2pa(void *va) {
     }
 }
 
-
-
-//void *
-//virt_addr_to_phys_addr(void *virt_addr) {
-//    void *virt_page_base = (void *)DOWN_TO_PAGE(virt_addr);
-//    void *phys_page_base;
-//    int vpn;
-//    int pfn;
-//
-//    if (virt_page_base >= (void *)VMEM_1_BASE) {
-//        vpn = ((long)virt_page_base - VMEM_1_BASE)/PAGESIZE;
-//        pfn = kernel_page_table[vpn].pfn;
-//    } else {
-////        vpn = (long)virt_page_base/PAGESIZE;
-////       // struct schedule_item *current = get_head();
-////        pfn = current->pcb->page_table[vpn].pfn;
-//    }
-
-//    phys_page_base = (void *) (long) (pfn * PAGESIZE);
-//
-//    long offset = (long)virt_addr & PAGEOFFSET;
-//
-//    return (void *)((long)phys_page_base + offset);
-//}
 /*************** Kernel Call ***************/
 /**
  * Get pid kernel call
@@ -550,11 +539,10 @@ int MyFork(void) {
 		return -1;
 		TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 	} else {
-        // create a new pcb for child, create a new savecontext and page table of region 0
+        // create a new pcb for child, copy savedcontext and creat a new page table
         child = (pcb*) malloc(sizeof(pcb));
         child->ctx = (SavedContext*) malloc(sizeof(SavedContext));
         allocPageTable(child);
-        // create a new pid for child
         child->pid=pid++;
         // copy content of parent to child: savedcontext and page table in the context switch
         ContextSwitch(switch_fork,parent->ctx, (void*) parent, (void*) child);
@@ -563,6 +551,9 @@ int MyFork(void) {
         return 0;
         TracePrintf(0,"fork : else");
     }
+
+   // ContextSwitch(parent->ctx,parent,child);
+    
 }
 
 /*
@@ -588,6 +579,7 @@ if a parent is terminate, its child's parent become null
 when a process exit, its resourses should be freed
 */
 void MyExit(int status){
+
     struct pcb *next_Proc;
 
     // // if it is idle, idle would never exit
@@ -601,6 +593,7 @@ void MyExit(int status){
     // // find the next process to run
     // cur_Proc = next_Proc;
     // next_Proc = 
+
 
  return ;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
@@ -618,10 +611,8 @@ On success, the Wait call returns the process ID of the child process and that c
 by the status_ptr argument. On any error, this call instead returns ERROR.
 */
 int MyWait(int *status_ptr) {
+
     int return_pid;
-
-
-
 return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
@@ -676,21 +667,6 @@ void allocPageTable(pcb* p)
     }
 }
 
-SavedContext *switch_fork(SavedContext *ctx, void *p1, void *p2) {
-    // copy the page table from p1 to p2
-    struct pte* pt2 = ((pcb*) p2)->page_table;
-    struct pte* pt1 = ((pcb*) p1)->page_table;
-    int i;
-    memcpy((void*)(pt2),(void *)(pt1),PAGE_TABLE_SIZE);//XXX
-    for(i=0; i<PAGE_TABLE_LEN; i++) {
-        if (pt2[i].valid) {
-            pt2[i].pfn = find_free_page();
-        }
-    }
-    WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
-    memcpy(((pcb*) p2)->ctx, ((pcb*) p1)->ctx, sizeof(SavedContext));
-    return ((pcb*)p2)->ctx;
-}
 
 void enqueue(struct proc_queue *queue, pcb *p) {
     if (queue->head == NULL)
@@ -701,7 +677,7 @@ void enqueue(struct proc_queue *queue, pcb *p) {
     p->next = NULL;
 }
 
-pcb *dequeue(struct proc_queue *queue) {
+pcb *dequeue(struct proc_queue *queue) {HEAD
     pcb *nextNode;
     if (queue->head == NULL) 
         return NULL;
