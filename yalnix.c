@@ -37,6 +37,7 @@ typedef struct pcb {
     struct pcb *parent;
     struct pcb *next;
     struct proc_queue *status_queue;
+    unsigned long brk;
 } pcb;
 
 // FIFO structure to store the read queue
@@ -62,7 +63,7 @@ typedef void (*interrupt_handler)(ExceptionInfo *info);
  */
 free_page *head;
 
-int free_page_num = 0;
+int free_addr_pgn = 0;
 
 /*
 define the terminals, which holds the read queue, write queue, readbuffer, writebuffer for each terms
@@ -106,7 +107,7 @@ void *va2pa(void *va);
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, char **cmd_args) {
     unsigned int i;
     TracePrintf(1, "Kernel Start: KernelStart called with num physical pages: %d.\n", pmem_size/PAGESIZE);
-    free_page_num = 0;
+    free_addr_pgn = 0;
 	kernel_cur_break = orig_brk;
 
 	kernel_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
@@ -138,19 +139,20 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     head = (free_page*) malloc(sizeof(free_page));
 	free_page *pointer = head;
     for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
+        pointer->addr = pointer;
         pointer->next = (free_page*) malloc(sizeof(free_page));
         pointer = pointer->next;
-        free_page_num++;
-        pointer->phys_page_num = free_page_num;
+        free_addr_pgn++;
+        pointer->phys_addr_pgn = free_addr_pgn;
     }
 
     pointer = head;
 	free_page *t;
     while (pointer->next!=NULL) {
-        if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_page_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
+        if (pointer->next->phys_addr_pgn >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_addr_pgn<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
             t = pointer->next;
             pointer->next = pointer->next->next;
-            free_page_num --;
+            free_addr_pgn --;
             free(t);
         }
         else pointer = pointer->next;
@@ -255,7 +257,7 @@ int SetKernelBrk(void *addr) {
 		if(addr > kernel_cur_break) {
 			TracePrintf(2, "Set kernel brk: addr > kernel_cur_break \n");
 			int i;
-            if ( DOWN_TO_PAGE(*(unsigned long *)addr) - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_page_num) return -1;
+            if ( DOWN_TO_PAGE(*(unsigned long *)addr) - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_addr_pgn) return -1;
 			/* Given a virtual page number, assign a physical page to its corresponding pte entry */
 			for(i = (UP_TO_PAGE(kernel_cur_break) - VMEM_1_BASE)>>PAGESHIFT; i < (UP_TO_PAGE(addr) - VMEM_1_BASE)>>PAGESHIFT; i++) {
                 kernel_page_table[i].pfn = find_free_page();
@@ -367,37 +369,23 @@ void TrapMemory(ExceptionInfo *info){
 void TrapMath(ExceptionInfo *info) {
 
 }
+
+// when terminal has typing return, hardware produce a trapttyreceive to kernel
+// this handler is to read newline into readbuffer located in region1
 void TrapTTYReceive(ExceptionInfo *info) {
     //use TtyReceive to write line into buf in region 1, which return the acutual char
     int tty_id = info->code;
     int char_num;
-    char_num = TtyReceive(tty_id, buf, TERMINAL_MAX_LINE);
-
-    if (terms[tty_id].readQueue!= NULL) {
-        ContextSwitch(, cur_Proc->ctx, cur_Proc, ready_queue);
-    }
-
+    char_num = TtyReceive(tty_id, terms[tty_id].readBuffer + terms[tty_id].readed, TERMINAL_MAX_LINE);
+    terms[tty_id].readed += char_num;
+    // need context switch here?
 }
+
 void TrapTTYTransmit(ExceptionInfo *info) {
     int tty_id = info->code;
     ContextSwitch();
 }
-/**
- * Return a free page pfn from the linked list
- */
-unsigned long find_free_page() {
-        if (head->next==NULL) {
-			TracePrintf(2, "Find Free Page: list is empty \n");
-			return 0;
-		}
-		free_page *tmp = head->next;
-        head->next = tmp->next;
-        free_page_num--;
-        unsigned long ret = tmp->phys_page_num;
-//      free(tmp);
-//		tmp = NULL;
-        return ret;
-}
+
 /************ Context switch function **********/
 /**
  * Context switch between these two processes
@@ -514,6 +502,48 @@ int MyDelay(int clock_ticks) {
     return 0;
 }
 
+/*
+set the loweast location not used by the program
+the actual break sould be rounded up to the pagesize
+*/
+int MyBrk(void *addr) {
+    // invalid assign
+    if (addr == NULL)
+        return ERROR;
+
+    unsigned long addr_pgn = UP_TO_PAGE(addr) >> PAGESHIFT;
+    unsigned long brk_pgn = UP_TO_PAGE(cur_Proc->brk) >> PAGESHIFT;
+
+    if (addr_pgn >= user_stack_bott()-1)
+        return ERROR;
+
+    // allocate
+    if (addr_pgn >= brk_pgn) {
+        if (addr_pgn - brk_pgn>free_addr_pgn)
+            return ERROR;
+        unsigned long i;
+        for (i=MEM_INVALID_PAGES;i<addr_pgn;i++) {
+            if (cur_Proc->page_table[i].valid == 0) {
+                cur_Proc->page_table[i].valid = 1;
+                cur_Proc->page_table[i].valid=1;
+                cur_Proc->page_table[i].uprot=PROT_READ|PROT_WRITE;
+                cur_Proc->page_table[i].kprot=PROT_READ|PROT_WRITE;
+                cur_Proc->page_table[i].pfn=find_free_page();
+            }
+        }
+    } else {
+        // deallocate
+        for (i=brk_pgn;i>=addr_pgn;i--) {
+            if (cur_Proc->page_table[i].valid == 1) {
+                cur_Proc->page_table[i].valid = 0;
+                free_used_page(cur_Proc->page_table[i]);
+            }   
+        }
+    }
+    cur_Proc->brk = (unsigned long)addr;
+    return 0;
+}
+
 /* input args: nond
  * return val: process ID for parent process, 0 for child process
  * child process's address is a copy of parent process's address space, the copy should include
@@ -535,7 +565,7 @@ int MyFork(void) {
     }
 
     // check if there is enough physical mem for the child
-	if (used_pgn_count > free_page_num) {
+	if (used_pgn_count > free_addr_pgn) {
 		return -1;
 		TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 	} else {
@@ -636,7 +666,17 @@ than len bytes, only the first len bytes of the line are copied to the calling p
 int TtyRead(int tty_id, void *buf, int len) {
     if (len < 0 || buf == NULL)
         return ERROR;
-
+    if (len == 0)
+        return 0;
+    while (terms[tty_id].char_num == 0) blocked;
+    if (len <= terms[tty_id].char_num) {
+        memcpy(buf,terms[tty_id].readBuffer, len);
+        return len;
+    }
+    else {
+        memcpy(buf, terms[tty_id].readBuffer, terms[tty_id].char_num);
+        return terms[tty_id].char_num;
+    }
 	return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
@@ -685,4 +725,39 @@ pcb *dequeue(struct proc_queue *queue) {HEAD
     queue->head = queue->head->next;
     nextNode->next = NULL;
     return nextNode;
+}
+
+// find out the bottom of the user stack
+unsigned long user_stack_bott(void) {
+    unsigned long bottom;
+    bottom = KERNEL_STACK_BASE >> PAGESHIFT - 1;
+    while (process_page_table[bottom].valid)
+        bottom--;
+    return bottom;
+}
+
+/**
+ * Return a free page pfn from the linked list
+ */
+unsigned long find_free_page() {
+        if (head->next==NULL) {
+            TracePrintf(2, "Find Free Page: list is empty \n");
+            return 0;
+        }
+        free_page *tmp = head->next;
+        head->next = tmp->next;
+        free_addr_pgn--;
+        unsigned long ret = tmp->phys_addr_pgn;
+//      free(tmp);
+//      tmp = NULL;
+        return ret;
+}
+
+void free_used_page(pte *p) {
+    // pfn to address ?= pfn * pagesize;
+    free((p->pfn) * PAGESIZE);
+    TracePrintf(0, "free the page number address %d", (p->pfn) * PAGESIZE);
+    free_page *tmp = (free_page*) malloc(sizeof(free_page));
+    tmp->next = head->next;
+    head->next = tmp;
 }
