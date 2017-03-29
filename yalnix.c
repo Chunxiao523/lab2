@@ -34,25 +34,30 @@ typedef struct pcb {
     int pid;
     pte * page_table;
     int child_num;
+    int clock_ticks;
     struct pcb *parent;
-    struct pcb *next;
+    struct pcb *readynext;
+    struct pcb *delaynext;
     struct proc_queue *status_queue;
     unsigned long brk;
 } pcb;
 
-// FIFO structure to store the read queue
-struct proc_queue{
-    struct pcb *head;
-    struct pcb *tail;
-};
+pcb *cur_Proc;
+pcb *idle;
+pcb *init;
+/*
+ * Head of the delay queue
+ */
+pcb *delayQ;
+/*
+ * Head of the ready queue
+ */
+pcb *readyQ;
 
 struct status_queue{
     int pid;
     int status;
-
-}
-
-struct proc_queque *ready_queue;
+};
 
 /*
  * The table used to store the interrupts
@@ -78,10 +83,7 @@ struct terminal
     int readed;
     char *writeBuffer;
 };
-terminal terms[NUM_TERMINALS];
-
-
-pcb *cur_Proc;
+//terminal terms[NUM_TERMINALS];
 
 void TrapKernel(ExceptionInfo *info);
 void TrapClock(ExceptionInfo *info);
@@ -93,6 +95,7 @@ void TrapTTYTransmit(ExceptionInfo *info);
 unsigned long find_free_page();
 void allocPageTable(pcb* p);
 SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2);
+SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2);
 int MyGetPid();
 void *va2pa(void *va);
 
@@ -113,6 +116,11 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	kernel_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
 	process_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
     idle_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
+
+    readyQ = (pcb *)malloc(sizeof(pcb));
+    delayQ = (pcb *)malloc(sizeof(pcb));
+    readyQ->readynext = NULL;
+    delayQ->delaynext = NULL;
 	/*
 	 * Initialize the interrupt table
 	 * You need to initialize page table entries for Region 1 for the kernel's text, data, bss, and heap,
@@ -220,14 +228,13 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	/*
 	 * Create idle and init process
 	 */
-	pcb *idle;
 	idle = (pcb*)malloc(sizeof(pcb));
     idle->pid = pid;
     idle->page_table = idle_page_table;
 	pid ++;
     idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
     TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
-	pcb *init;
+
 	init = (pcb *) malloc(sizeof(pcb));
 	init->pid = pid;
     init->page_table = process_page_table;
@@ -241,7 +248,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	ContextSwitch(MyKernelSwitchFunc, init->ctx, (void *) cur_Proc, (void *) idle);
     TracePrintf(2, "Kernel Start: Context Switch finished.\n");
     LoadProgram("idle",cmd_args,info, idle->page_table);
-
+    cur_Proc = idle;
 }
 /**
  * SetKernelBrk
@@ -312,7 +319,19 @@ void TrapKernel(ExceptionInfo *info) {
 		}
 }
 void TrapClock(ExceptionInfo *info) {
-
+    TracePrintf(2, "Kernel call: Trap clock\n");
+    pcb *temp = delayQ;
+    while (temp->delaynext != NULL){
+        temp->delaynext->clock_ticks --;
+        if(temp->clock_ticks == 0) {
+            //add to ready queue
+            add_readyQ(temp->delaynext);
+            temp -> delaynext = temp->delaynext->delaynext;
+        }else {
+            temp = temp->delaynext;
+        }
+    }
+    ContextSwitch(clockSwitch, cur_Proc->ctx, cur_Proc, readyQ);
 }
 void TrapIllegal(ExceptionInfo *info) {
 	 printf("[TRAP_ILLEGAL] Trapped Illegal Instruction, pid %d\n", 0);
@@ -374,16 +393,27 @@ void TrapMath(ExceptionInfo *info) {
 // this handler is to read newline into readbuffer located in region1
 void TrapTTYReceive(ExceptionInfo *info) {
     //use TtyReceive to write line into buf in region 1, which return the acutual char
+<<<<<<< HEAD
     int tty_id = info->code;
     int char_num;
     char_num = TtyReceive(tty_id, terms[tty_id].readBuffer + terms[tty_id].readed, TERMINAL_MAX_LINE);
     terms[tty_id].readed += char_num;
     // need context switch here?
+=======
+//    int tty_id = info->code;
+//    int char_num;
+//    char_num = TtyReceive(tty_id, buf, TERMINAL_MAX_LINE);
+//
+//    if (terms[tty_id].readQueue!= NULL) {
+//    //    ContextSwitch(, cur_Proc->ctx, cur_Proc, ready_queue);
+//    }
+
+>>>>>>> 6413b1de8e1980296f347a6a7a0b3ec9d8b5191a
 }
 
 void TrapTTYTransmit(ExceptionInfo *info) {
     int tty_id = info->code;
-    ContextSwitch();
+ //   ContextSwitch();
 }
 
 /************ Context switch function **********/
@@ -448,17 +478,34 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     }
   //  p2_pt[508].valid = 1;
     WriteRegister(REG_PTR0, (RCS421RegVal)p2_pt); // Set the register for region 0
-    TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", p2_pt);
-    TracePrintf(2, "Context Switch: Set the register for region 0， %d\n", va2pa(p2_pt));
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0); // flush
     TracePrintf(2, "Context Switch: finish context switch\n");
 
     // update globale variables, and load idle
     cur_Proc = (pcb *)pcb_ptr2;
     memcpy(((pcb *)pcb_ptr2)->ctx, ((pcb *)pcb_ptr1)->ctx, sizeof(SavedContext));
-//    memcpy(((pcb *)p2)->ctx, ((pcb *)p1)->ctx, sizeof(SavedContext));
 	return pcb_ptr2->ctx;
-//    return ((pcb *)p2)->ctx;
+}
+SavedContext *delayContextSwitch(SavedContext *ctxp, void *p1, void *p2){
+    if(readyQ == NULL) {
+        WriteRegister(REG_PTR0, (RCS421RegVal)idle->page_table); // Set the register for region 0
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+        cur_Proc = idle;
+    } else {
+        WriteRegister(REG_PTR0, (RCS421RegVal)((pcb *)p2)->page_table); // Set the register for region 0
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+        cur_Proc = ((pcb *)p2);
+    }
+    return cur_Proc->ctx;
+}
+SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
+    TracePrintf(2, "Context Switch: Context switch undering a Clock interrupt handler \n");
+    if (p2 != NULL) {
+        WriteRegister(REG_PTR0, (RCS421RegVal)((pcb *) p2)->page_table); // Set the register for region 0
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+        cur_Proc = ((pcb *)p2);
+    }
+    return cur_Proc->ctx;
 }
 /**
  * Function to map virtual address to physical address
@@ -494,11 +541,11 @@ int MyDelay(int clock_ticks) {
     int i;
     if(clock_ticks<0)
         return ERROR;
-    // currentProc->delay_clock=clock_ticks;
+     cur_Proc->clock_ticks=clock_ticks;
     if(clock_ticks>0){
-     //   ContextSwitch(MyKernelSwitchFunc,cur_Proc->ctx,cur_Proc,next_ready_queue());
+        ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,readyQ);
+        add_delayQ(cur_Proc);
     }
-
     return 0;
 }
 
@@ -575,7 +622,7 @@ int MyFork(void) {
         allocPageTable(child);
         child->pid=pid++;
         // copy content of parent to child: savedcontext and page table in the context switch
-        ContextSwitch(switch_fork,parent->ctx, (void*) parent, (void*) child);
+    //    ContextSwitch(switch_fork,parent->ctx, (void*) parent, (void*) child);
         // run the child 
         cur_Proc = child;
         return 0;
@@ -647,12 +694,6 @@ return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
 
-//int MyDelay(int clock_ticks){
-//	return 0;
-//	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
-//}
-
-
 /*Read the next line of input (or a portion of it) from terminal tty_id, copying the bytes of input into the buffer referenced by buf. 
 The maximum length of the line to be returned is given by len. A value of 0 for len is not in itself an error, as this simply means to 
 read “nothing” from the terminal. The line returned in the buffer is not null-terminated.
@@ -693,8 +734,7 @@ int TtyWrite(int tty_id, void *buf, int len) {
 unsigned long pa_next_table;
 int half = 0; // 1 is not half
 
-void allocPageTable(pcb* p)
-{
+void allocPageTable(pcb* p) {
     if (half == 1) {
         p->page_table = pa_next_table;
         pa_next_table += PAGESIZE/2;
@@ -707,26 +747,44 @@ void allocPageTable(pcb* p)
     }
 }
 
+//void enqueue(struct proc_queue *queue, pcb *p) {
+//    if (queue->head == NULL)
+//        queue->head = p;
+//    else
+//        queue->tail->next = p;
+//    queue->tail = p;
+//    p->next = NULL;
+//}
+//
+//pcb *dequeue(struct proc_queue *queue) {
+//    pcb *nextNode;
+//    if (queue->head == NULL)
+//        return NULL;
+//    nextNode = queue->head;
+//    queue->head = queue->head->next;
+//    nextNode->next = NULL;
+//    return nextNode;
+//}
 
-void enqueue(struct proc_queue *queue, pcb *p) {
-    if (queue->head == NULL)
-        queue->head = p;
-    else 
-        queue->tail->next = p;
-    queue->tail = p;
-    p->next = NULL;
+void add_readyQ(pcb *p) {
+    pcb *temp = readyQ;
+    while(temp != NULL) {
+        temp = temp->readynext;
+    }
+    temp->readynext = p;
+    p->readynext = NULL;
+}
+void add_delayQ(pcb *p) {
+    // Add Current Process to the tail of delayQ
+    pcb *temp = delayQ;
+    while(temp->delaynext != NULL) {
+        temp = temp->delaynext;
+    }
+    cur_Proc->delaynext = temp->delaynext;
+    temp->delaynext = cur_Proc;
 }
 
-pcb *dequeue(struct proc_queue *queue) {HEAD
-    pcb *nextNode;
-    if (queue->head == NULL) 
-        return NULL;
-    nextNode = queue->head;
-    queue->head = queue->head->next;
-    nextNode->next = NULL;
-    return nextNode;
-}
-
+<<<<<<< HEAD
 // find out the bottom of the user stack
 unsigned long user_stack_bott(void) {
     unsigned long bottom;
@@ -761,3 +819,5 @@ void free_used_page(pte *p) {
     tmp->next = head->next;
     head->next = tmp;
 }
+=======
+>>>>>>> 6413b1de8e1980296f347a6a7a0b3ec9d8b5191a

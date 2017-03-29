@@ -180,7 +180,6 @@ LoadProgram(char *name, char **args, ExceptionInfo *info, struct pte *process_pa
 
     for (i = 0;i < MEM_INVALID_PAGES; i ++) {
         process_page_table[i].valid = 0;
-        TracePrintf(0, "LoadProgram: text page %d \n", i);
     }
     TracePrintf(0, "LoadProgram: Deal with invalid pages  \n");
     /* First, the text pages */
