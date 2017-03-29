@@ -393,13 +393,13 @@ void TrapMath(ExceptionInfo *info) {
 // this handler is to read newline into readbuffer located in region1
 void TrapTTYReceive(ExceptionInfo *info) {
     //use TtyReceive to write line into buf in region 1, which return the acutual char
-<<<<<<< HEAD
+
     int tty_id = info->code;
     int char_num;
     char_num = TtyReceive(tty_id, terms[tty_id].readBuffer + terms[tty_id].readed, TERMINAL_MAX_LINE);
     terms[tty_id].readed += char_num;
     // need context switch here?
-=======
+
 //    int tty_id = info->code;
 //    int char_num;
 //    char_num = TtyReceive(tty_id, buf, TERMINAL_MAX_LINE);
@@ -408,7 +408,6 @@ void TrapTTYReceive(ExceptionInfo *info) {
 //    //    ContextSwitch(, cur_Proc->ctx, cur_Proc, ready_queue);
 //    }
 
->>>>>>> 6413b1de8e1980296f347a6a7a0b3ec9d8b5191a
 }
 
 void TrapTTYTransmit(ExceptionInfo *info) {
@@ -506,21 +505,6 @@ SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
         cur_Proc = ((pcb *)p2);
     }
     return cur_Proc->ctx;
-}
-/**
- * Function to map virtual address to physical address
- * (used in context switch)
- * @param va virtual address
- * @return physical address
- */
-void *va2pa(void *va) {
-    if (DOWN_TO_PAGE(va) >= VMEM_1_BASE) {
-        TracePrintf(2, "Va to Pa: Virtual address in region 1\n");
-        return (void *)((long)kernel_page_table[((long)DOWN_TO_PAGE(va) - VMEM_1_BASE) >> PAGESHIFT].pfn*PAGESIZE + ((long)va & PAGEOFFSET)) ;
-    } else {
-        TracePrintf(2, "Va to Pa: Virtual address in region 0\n");
-        return (void *)((long)cur_Proc->page_table[((long)DOWN_TO_PAGE(va) - VMEM_0_BASE) >> PAGESHIFT].pfn);
-    }
 }
 
 /*************** Kernel Call ***************/
@@ -784,7 +768,7 @@ void add_delayQ(pcb *p) {
     temp->delaynext = cur_Proc;
 }
 
-<<<<<<< HEAD
+
 // find out the bottom of the user stack
 unsigned long user_stack_bott(void) {
     unsigned long bottom;
@@ -819,5 +803,20 @@ void free_used_page(pte *p) {
     tmp->next = head->next;
     head->next = tmp;
 }
-=======
->>>>>>> 6413b1de8e1980296f347a6a7a0b3ec9d8b5191a
+
+/**
+ * Function to map virtual address to physical address
+ * (used in context switch)
+ * @param va virtual address
+ * @return physical address
+ */
+void *va2pa(void *va) {
+    if (DOWN_TO_PAGE(va) >= VMEM_1_BASE) {
+        TracePrintf(2, "Va to Pa: Virtual address in region 1\n");
+        return (void *)((long)kernel_page_table[((long)DOWN_TO_PAGE(va) - VMEM_1_BASE) >> PAGESHIFT].pfn*PAGESIZE + ((long)va & PAGEOFFSET)) ;
+    } else {
+        TracePrintf(2, "Va to Pa: Virtual address in region 0\n");
+        return (void *)((long)cur_Proc->page_table[((long)DOWN_TO_PAGE(va) - VMEM_0_BASE) >> PAGESHIFT].pfn);
+    }
+}
+
