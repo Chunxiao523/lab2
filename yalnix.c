@@ -33,7 +33,18 @@ typedef struct pcb {
     SavedContext *ctx;
     int pid;
     pte * page_table;
+    int child_num;
+    struct *parent;
 } pcb;
+
+// FIFO structure to store the read queue
+struct proc_queue{
+    struct pcb *head;
+    struct pcb *tail;
+    long proc_cnt;
+}
+
+
 /*
  * The table used to store the interrupts
  */
@@ -534,15 +545,20 @@ int MyFork(void) {
         return 0;
         TracePrintf(0,"fork : else");
     }
-
-
-    
-
 }
 
-
-int MyExec(char *filename, char **argvec) {
-return 0;
+/*
+Replace the current process with process stored in filename
+if failure, return ERROR
+*/
+int MyExec(char *filename, char **argvec, ExceptionInfo *info, struct pte *process_page_table) {
+    int status;
+    status = LoadProgram(filename, argvec, info, process_page_table);
+    if (status == -1)
+        return ERROR;
+    if (status == -2)
+        MyExit(ERROR);
+    return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
 
@@ -554,12 +570,26 @@ if a parent is terminate, its child's parent become null
 when a process exit, its resourses should be freed
 */
 void MyExit(int status){
+    struct pcb *next_Proc;
+
+    // if it is idle, idle would never exit
+    if (cur_Proc->pid == 0)
+        return
+
+    // if it is init
+    if (cur_Proc->pid == 1) 
+        Halt();
+
+    // find the next process to run
+    cur_Proc = next_Proc;
+    // next_Proc = 
 
  return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
 
 int MyWait(int *status_ptr) {
+
 return 0;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
