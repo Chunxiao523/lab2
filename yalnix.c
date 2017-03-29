@@ -48,8 +48,7 @@ struct proc_queue{
 struct status_queue{
     int pid;
     int status;
-
-}
+};
 
 struct proc_queque *ready_queue;
 
@@ -677,7 +676,7 @@ void enqueue(struct proc_queue *queue, pcb *p) {
     p->next = NULL;
 }
 
-pcb *dequeue(struct proc_queue *queue) {HEAD
+pcb *dequeue(struct proc_queue *queue) {
     pcb *nextNode;
     if (queue->head == NULL) 
         return NULL;
