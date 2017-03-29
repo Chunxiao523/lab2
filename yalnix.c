@@ -391,7 +391,7 @@ void TrapTTYReceive(ExceptionInfo *info) {
     char_num = TtyReceive(tty_id, buf, TERMINAL_MAX_LINE);
 
     if (terms[tty_id].readQueue!= NULL) {
-        ContextSwitch(, cur_Proc->ctx, cur_Proc, ready_queue);
+    //    ContextSwitch(, cur_Proc->ctx, cur_Proc, ready_queue);
     }
 
 }
@@ -726,7 +726,7 @@ void add_delayQ(pcb *p) {
     while(temp->delaynext != NULL) {
         temp = temp->delaynext;
     }
-    cur_Proc->delaynext = temp->next;
+    cur_Proc->delaynext = temp->delaynext;
     temp->delaynext = cur_Proc;
 }
 
