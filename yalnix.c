@@ -246,6 +246,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	ContextSwitch(MyKernelSwitchFunc, init->ctx, (void *) cur_Proc, (void *) idle);
     TracePrintf(2, "Kernel Start: Context Switch finished.\n");
     LoadProgram("idle",cmd_args,info, idle->page_table);
+    cur_Proc = idle;
 }
 /**
  * SetKernelBrk
@@ -499,6 +500,7 @@ SavedContext *delayContextSwitch(SavedContext *ctxp, void *p1, void *p2){
     return cur_Proc->ctx;
 }
 SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
+    TracePrintf(2, "Context Switch: Context switch undering a Clock interrupt handler \n");
     if (p2 != NULL) {
         WriteRegister(REG_PTR0, (RCS421RegVal)((pcb *) p2)->page_table); // Set the register for region 0
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
