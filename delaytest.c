@@ -4,10 +4,10 @@
 #include <comp421/hardware.h>
 
 int
-main(int argc, char **argv)
+main()
 {
     fprintf(stderr, "Starting delay...\n");
-    Delay(atoi(argv[1]));
+    Delay(5);
     fprintf(stderr, "Delay finished!\n");
 
     Exit(0);
