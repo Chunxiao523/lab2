@@ -805,7 +805,8 @@ unsigned long find_free_page() {
         free_page *tmp = head->next;
         head->next = tmp->next;
         free_addr_pgn--;
-        unsigned long ret = tmp->phys_addr_pgn;
+        //unsigned long ret = tmp->phys_addr_pgn;
+        unsigned long ret = tmp->phys_addr_num;
 //      free(tmp);
 //      tmp = NULL;
         return ret;
