@@ -6,7 +6,7 @@
 int main(int argc, char **argv)
 {
     fprintf(stderr, "Starting delay...\n");
-    Delay(atoi(5));
+    Delay(5);
     fprintf(stderr, "Delay finished!\n");
 
     Exit(0);
