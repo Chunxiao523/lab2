@@ -268,6 +268,7 @@ int SetKernelBrk(void *addr) {
 		if(addr > kernel_cur_break) {
 			TracePrintf(2, "Set kernel brk: addr > kernel_cur_break \n");
 			int i;
+            TracePrintf(2, "Set kernel brk: aaaaaaddr > kernel_cur_break \n");
             if ( DOWN_TO_PAGE(*(unsigned long *)addr) - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_page_num) {
                 TracePrintf(2, "Set Kernel brk: Not enough pages\n");
                 return -1;
