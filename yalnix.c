@@ -82,7 +82,10 @@ struct terminal
     char *readBuffer;
     int readed;
     char *writeBuffer;
+    int char_num;
 };
+
+struct terminal terms[NUM_TERMINALS];
 //terminal terms[NUM_TERMINALS];
 
 void TrapKernel(ExceptionInfo *info);
@@ -147,7 +150,6 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     head = (free_page*) malloc(sizeof(free_page));
 	free_page *pointer = head;
     for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
-        pointer->addr = pointer;
         pointer->next = (free_page*) malloc(sizeof(free_page));
         pointer = pointer->next;
         free_addr_pgn++;
@@ -393,7 +395,6 @@ void TrapMath(ExceptionInfo *info) {
 // this handler is to read newline into readbuffer located in region1
 void TrapTTYReceive(ExceptionInfo *info) {
     //use TtyReceive to write line into buf in region 1, which return the acutual char
-
     int tty_id = info->code;
     int char_num;
     char_num = TtyReceive(tty_id, terms[tty_id].readBuffer + terms[tty_id].readed, TERMINAL_MAX_LINE);
@@ -506,6 +507,13 @@ SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
     }
     return cur_Proc->ctx;
 }
+// copy page table, kernel stack and ctxp from p1 to p2
+SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
+    unsigned long i;
+    for (i=0;i<PAGE_TABLE_LEN;i++) {
+
+    }
+}
 
 /*************** Kernel Call ***************/
 /**
@@ -544,6 +552,7 @@ int MyBrk(void *addr) {
 
     unsigned long addr_pgn = UP_TO_PAGE(addr) >> PAGESHIFT;
     unsigned long brk_pgn = UP_TO_PAGE(cur_Proc->brk) >> PAGESHIFT;
+    unsigned long i;
 
     if (addr_pgn >= user_stack_bott()-1)
         return ERROR;
@@ -552,7 +561,7 @@ int MyBrk(void *addr) {
     if (addr_pgn >= brk_pgn) {
         if (addr_pgn - brk_pgn>free_addr_pgn)
             return ERROR;
-        unsigned long i;
+        
         for (i=MEM_INVALID_PAGES;i<addr_pgn;i++) {
             if (cur_Proc->page_table[i].valid == 0) {
                 cur_Proc->page_table[i].valid = 1;
@@ -600,13 +609,20 @@ int MyFork(void) {
 		return -1;
 		TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 	} else {
-        // create a new pcb for child, copy savedcontext and creat a new page table
+        // create a new pcb, savedcontext, and a new page table for child
         child = (pcb*) malloc(sizeof(pcb));
         child->ctx = (SavedContext*) malloc(sizeof(SavedContext));
         allocPageTable(child);
+        // copy pcb, savedcontext, pagetable from parent to child
         child->pid=pid++;
+        child->child_num = 0;
+        child->clock_ticks = 0;
+        child->parent = cur_Proc;
+        child->brk = parent->brk;
+        // why need readynext in the pcb?
+
         // copy content of parent to child: savedcontext and page table in the context switch
-    //    ContextSwitch(switch_fork,parent->ctx, (void*) parent, (void*) child);
+       // ContextSwitch(switch_fork,parent->ctx, (void*) parent, (void*) child);
         // run the child 
         cur_Proc = child;
         return 0;
@@ -693,7 +709,7 @@ int TtyRead(int tty_id, void *buf, int len) {
         return ERROR;
     if (len == 0)
         return 0;
-    while (terms[tty_id].char_num == 0) blocked;
+    // while (terms[tty_id].char_num == 0) blocked;
     if (len <= terms[tty_id].char_num) {
         memcpy(buf,terms[tty_id].readBuffer, len);
         return len;
@@ -795,13 +811,16 @@ unsigned long find_free_page() {
         return ret;
 }
 
-void free_used_page(pte *p) {
+int free_used_page(pte *p) {
+    if (p == NULL)
+        return ERROR;
     // pfn to address ?= pfn * pagesize;
     free((p->pfn) * PAGESIZE);
     TracePrintf(0, "free the page number address %d", (p->pfn) * PAGESIZE);
     free_page *tmp = (free_page*) malloc(sizeof(free_page));
     tmp->next = head->next;
     head->next = tmp;
+    return 1;
 }
 
 /**
