@@ -639,8 +639,8 @@ int MyBrk(void *addr) {
     unsigned long brk_pgn = UP_TO_PAGE(cur_Proc->brk) >> PAGESHIFT;
     unsigned long i;
 
-    if (addr_pgn >= user_stack_bott()-1)
-        return ERROR;
+//    if (addr_pgn >= user_stack_bott()-1)
+//        return ERROR;
 
     // allocate
     if (addr_pgn >= brk_pgn) {
