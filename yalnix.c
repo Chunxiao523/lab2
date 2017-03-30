@@ -554,11 +554,11 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
    // unsigned long i;
 
     // try to find a buffer in the region 0, if no available, find it in region 1
-    unsigned long entry_num = buf_region0();
+  //  unsigned long entry_num = buf_region0();
     void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_0_BASE);
     TracePrintf("forkSwitch: find a entry %d in region0 %d", entry_num, vaddr_entry);
     if (entry_num == -1) {
-        entry_num = buf_region1();
+       // entry_num = buf_region1();
         vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
         TracePrintf("forkSwitch: find a entry %d in region1 %d", entry_num, vaddr_entry);
     } 
@@ -929,40 +929,40 @@ void *va2pa(void *va) {
 }
 
 // find the first unused pte number in the current process's page table
-unsigned long buf_region0() {
-    if (free_page_num <= 0) return -1;
-    unsigned long entry_number;
-    pcb* curr = cur_Proc;
-    pte* curr_table = curr->page_table;
-    unsigned long i;
-    for (i = MEM_INVALID_PAGES; i < PAGE_TABLE_LEN - 5; i++) {
-        if (curr_table[i].valid == 0){
-            curr_table[i].valid = 1;
-            curr_table[i].kprot = PROT_READ | PROT_WRITE;
-            curr_table[i].uprot = PROT_READ | PROT_EXEC;
-            curr_table[i].pfn = find_free_page();
-            entry_number = i;
-            return entry_number;
-        } 
-    }
-    return -1;
-}
-
-unsigned long buf_region1() {
-    if (free_page_num <= 0) return -1;
-    unsigned long entry_number;
-    pte* curr_table = kernel_page_table;
-    unsigned long i;
-    for (i = 0; i < PAGE_TABLE_LEN; i++) {
-        if (curr_table[i].valid == 0){
-            curr_table[i].valid = 1;
-            curr_table[i].kprot = PROT_READ | PROT_WRITE;
-            curr_table[i].uprot = PROT_NONE;
-            curr_table[i].pfn = find_free_page();
-            entry_number = i;
-            return entry_number;
-        } 
-    }
-    return -1;
-}
+//unsigned long buf_region0() {
+//    if (free_page_num <= 0) return -1;
+//    unsigned long entry_number;
+//    pcb* curr = cur_Proc;
+//    pte* curr_table = curr->page_table;
+//    unsigned long i;
+//    for (i = MEM_INVALID_PAGES; i < PAGE_TABLE_LEN - 5; i++) {
+//        if (curr_table[i].valid == 0){
+//            curr_table[i].valid = 1;
+//            curr_table[i].kprot = PROT_READ | PROT_WRITE;
+//            curr_table[i].uprot = PROT_READ | PROT_EXEC;
+//            curr_table[i].pfn = find_free_page();
+//            entry_number = i;
+//            return entry_number;
+//        }
+//    }
+//    return -1;
+//}
+//
+//unsigned long buf_region1() {
+//    if (free_page_num <= 0) return -1;
+//    unsigned long entry_number;
+//    pte* curr_table = kernel_page_table;
+//    unsigned long i;
+//    for (i = 0; i < PAGE_TABLE_LEN; i++) {
+//        if (curr_table[i].valid == 0){
+//            curr_table[i].valid = 1;
+//            curr_table[i].kprot = PROT_READ | PROT_WRITE;
+//            curr_table[i].uprot = PROT_NONE;
+//            curr_table[i].pfn = find_free_page();
+//            entry_number = i;
+//            return entry_number;
+//        }
+//    }
+//    return -1;
+//}
 
