@@ -68,7 +68,7 @@ typedef void (*interrupt_handler)(ExceptionInfo *info);
  */
 free_page *head;
 
-int free_page_num = 0;
+int free_page_num;
 
 /*
 define the terminals, which holds the read queue, write queue, readbuffer, writebuffer for each terms
