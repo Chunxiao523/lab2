@@ -654,6 +654,7 @@ Replace the current process with process stored in filename
 if failure, return ERROR
 */
 int MyExec(ExceptionInfo *info, char *filename, char **argvec) {
+    TracePrintf(0,"Kernel Call: EXEC called!.\n", filename);
     int status;
     status = LoadProgram(filename, argvec,info, process_page_table);
     if (status == -1)
