@@ -122,6 +122,8 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
     readyQ = (pcb *)malloc(sizeof(pcb));
     delayQ = (pcb *)malloc(sizeof(pcb));
+    readyQ = NULL;
+    delayQ = NULL;
     readyQ->readynext = NULL;
     delayQ->delaynext = NULL;
 	/*
