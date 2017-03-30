@@ -38,6 +38,7 @@ typedef struct pcb {
     struct pcb *parent;
     struct pcb *readynext;
     struct pcb *delaynext;
+    struct pcb *delaypre;
     struct proc_queue *status_queue;
     unsigned long brk;
 } pcb;
@@ -332,19 +333,19 @@ void TrapKernel(ExceptionInfo *info) {
 void TrapClock(ExceptionInfo *info) {
     TracePrintf(2, "Kernel call: Trap clock\n");
     pcb *temp = delayQ;
-    if (temp != NULL) {
-        while (temp->delaynext != NULL){
+
+        while (temp != NULL){
             //  TracePrintf(2, "Kernel call: Trap clock\n");
-            temp->delaynext->clock_ticks --;
+            temp->clock_ticks --;
+            TracePrintf(2, "Kernel call: Trap clock, delayQ clock ticks changes to %d\n", temp->delaynext->clock_ticks);
             if(temp->clock_ticks == 0) {
                 //add to ready queue
-                add_readyQ(temp->delaynext);
-                temp -> delaynext = temp->delaynext->delaynext;
-            }else {
-                temp = temp->delaynext;
+                add_readyQ(temp);
+                temp -> delaypre -> delaynext = temp->delaynext;
             }
+            temp = temp->delaynext;
         }
-    }
+
 
     if (readyQ != NULL) {
         ContextSwitch(clockSwitch, cur_Proc->ctx, cur_Proc, readyQ);
@@ -790,9 +791,17 @@ void add_readyQ(pcb *p) {
 void add_delayQ(pcb *p) {
     // Add Current Process to the tail of delayQ
     pcb *temp = delayQ;
+    if (temp == NULL) {
+        delayQ = cur_Proc;
+        cur_Proc->delaynext = NULL;
+        cur_Proc->delaypre = NULL;
+        return;
+    }
+
     while(temp->delaynext != NULL) {
         temp = temp->delaynext;
     }
+    cur_Proc->delaypre = temp;
     cur_Proc->delaynext = temp->delaynext;
     temp->delaynext = cur_Proc;
 }
