@@ -557,6 +557,7 @@ int MyGetPid() {
  * Delay kernel call
  */
 int MyDelay(int clock_ticks) {
+    TracePrintf(0,"Kernel Call: Delay is called\n");
     int i;
     if(clock_ticks<0)
         return ERROR;
