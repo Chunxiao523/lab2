@@ -937,10 +937,10 @@ unsigned long buf_region0() {
     unsigned long i;
     for (i = MEM_INVALID_PAGES; i < PAGE_TABLE_LEN - 5; i++) {
         if (!curr_table[i] == 1){
-            curr_table[i]->valid = 1;
-            curr_table[i]->kprot = PROT_READ | PROT_WRITE;
-            curr_table[i]->uprot = PROT_READ | PROT_EXEC;
-            curr_table[i]->pfn = find_free_page();
+            curr_table[i].valid = 1;
+            curr_table[i].kprot = PROT_READ | PROT_WRITE;
+            curr_table[i].uprot = PROT_READ | PROT_EXEC;
+            curr_table[i].pfn = find_free_page();
             entry_number = i;
             return entry_number;
         } 
@@ -956,9 +956,9 @@ unsigned long buf_region1() {
     for (i = 0; i < PAGE_TABLE_LEN; i++) {
         if (!curr_table[i] == 1){
             curr_table[i].valid = 1;
-            curr_table[i]->kprot = PROT_READ | PROT_WRITE;
-            curr_table[i]->uprot = PROT_NONE;
-            curr_table[i]->pfn = find_free_page();
+            curr_table[i].kprot = PROT_READ | PROT_WRITE;
+            curr_table[i].uprot = PROT_NONE;
+            curr_table[i].pfn = find_free_page();
             entry_number = i;
             return entry_number;
         } 
