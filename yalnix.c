@@ -45,8 +45,9 @@ typedef struct pcb {
     struct pcb *parent;
     struct pcb *readynext;
     struct pcb *delaynext;
+    struct pcb *waitnext;
     struct pcb *delaypre;
-    struct proc_queue *status_queue;
+    struct Child *child;
     unsigned long brk;
 } pcb;
 
@@ -62,10 +63,19 @@ pcb *delayQ;
  */
 pcb *readyQ;
 
-struct status_queue{
+/*
+ * FIFO wait queue
+ */
+pcb *waitQ;
+
+/*
+ * child of a process which store its pid and status
+ */
+typedef struct child_node{
     int pid;
     int status;
-};
+    struct child_node *next;
+} Child;
 
 /*
  * The table used to store the interrupts
@@ -551,7 +561,6 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     (pcb*) child = (pcb*)p2;
     pte* pt1 = parent->page_table;
     pte* pt2 = child->page_table;
-    unsigned long i;
 
     // try to find a buffer in the region 0, if no available, find it in region 1
     unsigned long entry_num = buf_region0();
@@ -596,6 +605,15 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     return child->ctx;
 }
 
+// 
+SavedContext *waitSwitch(SavedContext *ctxp, void *p1, void *p2) {
+    unsigned long i;
+    // save the context to ctxp
+    // return to the new context
+    pte* pt1 = ->page_table;
+    pte* pt2 = ->page_table;
+
+}
 
 /*************** Kernel Call ***************/
 /**
@@ -730,6 +748,7 @@ int MyExec(ExceptionInfo *info, char *filename, char **argvec) {
 
 /*
 kernel call for terminalling a process
+return status to its parent
 para: the status of this process
 if a child is terminate, it report status to its wait parent
 if a parent is terminate, its child's parent become null
@@ -768,7 +787,17 @@ by the status_ptr argument. On any error, this call instead returns ERROR.
 int MyWait(int *status_ptr) {
 
     int return_pid;
-return 0;
+    pcb *tmp = cur_Proc;
+    // if calling process have no child, return ERROR
+    if (cur_Proc->child_num == 0) 
+        return ERROR;
+    // if child queue is empty, block the calling process, return until one child is exit or terminated
+    if (cur_Proc->child == NULL) {
+        ContextSwitch(delayContextSwitch(), cur_Proc->ctx,cur_Proc,get_readyQ);
+    }
+
+
+return return_pid;
 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
 
@@ -852,6 +881,17 @@ void add_readyQ(pcb *p) {
     temp->readynext = p;
     p->readynext = NULL;
 }
+
+pcb *get_readyQ() {
+    if (readQ == NULL) {
+        return ERROR;
+    }
+    pcb *tmp = readQ;
+    readQ = readQ->readynext;
+    tmp->readynext = NULL;
+    return tmp;
+}
+
 void add_delayQ(pcb *p) {
     // Add Current Process to the tail of delayQ
     pcb *temp = delayQ;
@@ -868,6 +908,24 @@ void add_delayQ(pcb *p) {
     cur_Proc->delaypre = temp;
     cur_Proc->delaynext = temp->delaynext;
     temp->delaynext = cur_Proc;
+}
+
+void add_waitQ(pcb *p) {
+    pcb *tmp = waitQ;
+    while(tmp != NULL) {
+        tmp = tmp->waitnext;
+    }
+    tmp = p;
+}
+
+pcb *get_waitQ() {
+    if (waitQ == NULL) {
+        return ERROR;
+    }
+    pcb *tmp = waitQ;
+    waitQ = waitQ->waitnext;
+    tmp->waitnext = NULL;
+    return tmp;
 }
 
 
