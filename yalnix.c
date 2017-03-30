@@ -269,9 +269,9 @@ int SetKernelBrk(void *addr) {
                 TracePrintf(2, "Set Kernel brk: add invalid\n");
                 return -1;
             }
-
 			/* Given a virtual page number, assign a physical page to its corresponding pte entry */
 			for(i = (UP_TO_PAGE(kernel_cur_break) - VMEM_1_BASE)>>PAGESHIFT; i < (UP_TO_PAGE(addr) - VMEM_1_BASE)>>PAGESHIFT; i++) {
+                TracePrintf(2, "Set Kernel brk: working...\n");
                 kernel_page_table[i].pfn = find_free_page();
                 kernel_page_table[i].valid = 1;
                 kernel_page_table[i].kprot = PROT_READ|PROT_WRITE;
