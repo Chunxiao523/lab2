@@ -265,7 +265,11 @@ int SetKernelBrk(void *addr) {
 		if(addr > kernel_cur_break) {
 			TracePrintf(2, "Set kernel brk: addr > kernel_cur_break \n");
 			int i;
-            if ( DOWN_TO_PAGE(*(unsigned long *)addr) - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_page_num) return -1;
+            if ( DOWN_TO_PAGE(*(unsigned long *)addr) - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_page_num) {
+                TracePrintf(2, "Set Kernel brk: add invalid\n");
+                return -1;
+            }
+
 			/* Given a virtual page number, assign a physical page to its corresponding pte entry */
 			for(i = (UP_TO_PAGE(kernel_cur_break) - VMEM_1_BASE)>>PAGESHIFT; i < (UP_TO_PAGE(addr) - VMEM_1_BASE)>>PAGESHIFT; i++) {
                 kernel_page_table[i].pfn = find_free_page();
