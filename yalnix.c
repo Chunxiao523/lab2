@@ -331,16 +331,20 @@ void TrapKernel(ExceptionInfo *info) {
 void TrapClock(ExceptionInfo *info) {
     TracePrintf(2, "Kernel call: Trap clock\n");
     pcb *temp = delayQ;
-    while (temp->delaynext != NULL){
-        temp->delaynext->clock_ticks --;
-        if(temp->clock_ticks == 0) {
-            //add to ready queue
-            add_readyQ(temp->delaynext);
-            temp -> delaynext = temp->delaynext->delaynext;
-        }else {
-            temp = temp->delaynext;
+    if (temp != NULL) {
+        while (temp->delaynext != NULL){
+            //  TracePrintf(2, "Kernel call: Trap clock\n");
+            temp->delaynext->clock_ticks --;
+            if(temp->clock_ticks == 0) {
+                //add to ready queue
+                add_readyQ(temp->delaynext);
+                temp -> delaynext = temp->delaynext->delaynext;
+            }else {
+                temp = temp->delaynext;
+            }
         }
     }
+
     if (readyQ != NULL) {
         ContextSwitch(clockSwitch, cur_Proc->ctx, cur_Proc, readyQ);
     }
