@@ -547,11 +547,11 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     unsigned long i;
     // save the context to ctxp
     // return to the new context
-    (pcb*) parent = (pcb*) p1;
-    (pcb*) child = (pcb*)p2;
+    pcb* parent = (pcb*) p1;
+    pcb* child = (pcb*)p2;
     pte* pt1 = parent->page_table;
     pte* pt2 = child->page_table;
-    unsigned long i;
+   // unsigned long i;
 
     // try to find a buffer in the region 0, if no available, find it in region 1
     unsigned long entry_num = buf_region0();
@@ -575,9 +575,9 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
             pt2[i].valid = 1;
             pt2[i].uprot = pt1[i].uprot;
             pt2[i].kprot = pt2[i].kprot;
-            pt2[i].pgn = pt1[entry_num].pgn;
+         //   pt2[i].pgn = pt1[entry_num].pgn;
             WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
-            pt1[entry_num].pgn = find_free_page();
+         //   pt1[entry_num].pgn = find_free_page();
         }
     }
     // free the buffer and disable that entry in the page table
@@ -643,7 +643,7 @@ int MyBrk(void *addr) {
 
     // allocate
     if (addr_pgn >= brk_pgn) {
-        if (addr_pgn - brk_pgn>free_addr_pgn)
+        if (addr_pgn - brk_pgn>free_page_num)
             return ERROR;
         
         for (i=MEM_INVALID_PAGES;i<addr_pgn;i++) {
@@ -705,7 +705,7 @@ int MyFork(void) {
     child->parent = cur_Proc;
     child->brk = parent->brk;
     // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
-    ContextSwitch(forkSwitch(), parent->ctx, parent, child);
+    //ContextSwitch(forkSwitch(), parent->ctx, parent, child);
     if (cur_Proc->pid == parent->pid) {
         return child_pid;
     } else {
