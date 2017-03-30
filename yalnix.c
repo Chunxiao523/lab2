@@ -207,7 +207,6 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     }
     for (addr = KERNEL_STACK_BASE; addr < VMEM_0_LIMIT; addr+= PAGESIZE) {
     	i = (addr - VMEM_0_BASE)>>PAGESHIFT; //VMEM_0_BASE = 0
-        TracePrintf(2, "Kernel Start: kernel stack number %d\n", i);
     	process_page_table[i].pfn = addr>>PAGESHIFT;
         process_page_table[i].valid = 1;
         process_page_table[i].kprot = PROT_READ|PROT_WRITE;
@@ -798,6 +797,7 @@ void add_delayQ(pcb *p) {
  * Return a free page pfn from the linked list
  */
 unsigned long find_free_page() {
+    TracePrintf(2, "Find free page: finding...\n");
         if (head->next==NULL) {
             TracePrintf(2, "Find Free Page: list is empty \n");
             return 0;
