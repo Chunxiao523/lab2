@@ -255,7 +255,10 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
  * SetKernelBrk
  */
 int SetKernelBrk(void *addr) {
-	if ((unsigned long *)addr >= VMEM_1_LIMIT || (unsigned long *)addr < VMEM_1_BASE) return -1;
+	if ((unsigned long *)addr >= VMEM_1_LIMIT || (unsigned long *)addr < VMEM_1_BASE) {
+        TracePrintf(2, "Set Kernel brk: add invalid!\n");
+        return -1;
+    }
 	if (vir_mem == 0) {
 		kernel_cur_break = addr;
 	} else {
