@@ -228,32 +228,40 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	WriteRegister(REG_VM_ENABLE, 1);
 	vir_mem = 1;
     TracePrintf(2, "Kernel Start: virtual memory enabled.\n");
-
-	/*
+    if (info->regs[1] != NULL) {
+        LoadProgram("delaytest",cmd_args,info, process_page_table);
+        cur_Proc->page_table = process_page_table;
+        cur_Proc->pid = pid;
+        pid ++;
+        cur_Proc->ctx=(SavedContext*)malloc(sizeof(SavedContext));
+    } else {
+        /*
 	 * Create idle and init process
 	 */
-	idle = (pcb*)malloc(sizeof(pcb));
-    idle->pid = pid;
-    idle->page_table = idle_page_table;
-	pid ++;
-    idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
-    TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
+        idle = (pcb*)malloc(sizeof(pcb));
+        idle->pid = pid;
+        idle->page_table = idle_page_table;
+        pid ++;
+        idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
+        TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
 
-	init = (pcb *) malloc(sizeof(pcb));
-	init->pid = pid;
-    init->page_table = process_page_table;
-	pid ++;
-	init->ctx = (SavedContext *)malloc(sizeof(SavedContext));
-	cur_Proc = init;
+        init = (pcb *) malloc(sizeof(pcb));
+        init->pid = pid;
+        init->page_table = process_page_table;
+        pid ++;
+        init->ctx = (SavedContext *)malloc(sizeof(SavedContext));
+        cur_Proc = init;
 
-    LoadProgram("init",cmd_args,info, process_page_table);
-    TracePrintf(2, "Kernel Start: init process pcb initialized.\n");
+        LoadProgram("init",cmd_args,info, process_page_table);
+        TracePrintf(2, "Kernel Start: init process pcb initialized.\n");
 
-	ContextSwitch(MyKernelSwitchFunc, init->ctx, (void *) cur_Proc, (void *) idle);
-    TracePrintf(2, "Kernel Start: Context Switch finished.\n");
-    LoadProgram("idle",cmd_args,info, idle->page_table);
-    cur_Proc = idle;
-    TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
+        ContextSwitch(MyKernelSwitchFunc, init->ctx, (void *) cur_Proc, (void *) idle);
+        TracePrintf(2, "Kernel Start: Context Switch finished.\n");
+        LoadProgram("idle",cmd_args,info, idle->page_table);
+        cur_Proc = idle;
+        TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
+    }
+
 }
 /**
  * SetKernelBrk
@@ -303,7 +311,7 @@ void TrapKernel(ExceptionInfo *info) {
 				(*info).regs[0] = NULL;
 				break;
 			case YALNIX_EXEC:
-				(*info).regs[0] = NULL;
+				(*info).regs[0] = MyExec((char *)(info->regs[1]), (char **)(info->regs[2]));
 				break;
 			case YALNIX_EXIT:
 				(*info).regs[0] = MyExit((int)info->regs[1]);
@@ -653,15 +661,15 @@ int MyFork(void) {
 Replace the current process with process stored in filename
 if failure, return ERROR
 */
-int MyExec(char *filename, char **argvec, ExceptionInfo *info, struct pte *process_page_table) {
-    int status;
-    status = LoadProgram(filename, argvec, info, process_page_table);
-    if (status == -1)
-        return ERROR;
-    // if (status == -2)
-        // MyExit(ERROR);
-    return 0;
-	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+int MyExec(char *filename, char **argvec) {
+//    int status;
+//    status = LoadProgram(filename, argvec, info, allocPageTable());
+//    if (status == -1)
+//        return ERROR;
+//    // if (status == -2)
+//        // MyExit(ERROR);
+//    return 0;
+// 	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
 
 /*
