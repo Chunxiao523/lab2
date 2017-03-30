@@ -936,7 +936,7 @@ unsigned long buf_region0() {
     pte* curr_table = curr->page_table;
     unsigned long i;
     for (i = MEM_INVALID_PAGES; i < PAGE_TABLE_LEN - 5; i++) {
-        if (!curr_table[i] == 1){
+        if (curr_table[i] == 0){
             curr_table[i].valid = 1;
             curr_table[i].kprot = PROT_READ | PROT_WRITE;
             curr_table[i].uprot = PROT_READ | PROT_EXEC;
@@ -954,7 +954,7 @@ unsigned long buf_region1() {
     pte* curr_table = kernel_page_table;
     unsigned long i;
     for (i = 0; i < PAGE_TABLE_LEN; i++) {
-        if (!curr_table[i] == 1){
+        if (curr_table[i] == 0){
             curr_table[i].valid = 1;
             curr_table[i].kprot = PROT_READ | PROT_WRITE;
             curr_table[i].uprot = PROT_NONE;
