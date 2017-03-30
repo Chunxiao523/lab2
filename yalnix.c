@@ -10,6 +10,13 @@ void *kernel_cur_break;
  * 0: not, 1: yes
  */
 int vir_mem = 0;
+
+/*
+stack buffer for context switch
+*/
+char kernel_stack_buff[PAGESIZE*KERNEL_STACK_PAGES];
+
+
 /*
  * pid value
  */
@@ -507,13 +514,61 @@ SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
     }
     return cur_Proc->ctx;
 }
+
 // copy page table, kernel stack and ctxp from p1 to p2
 SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     unsigned long i;
-    for (i=0;i<PAGE_TABLE_LEN;i++) {
+    // save the context to ctxp
+    // return to the new context
+    (pcb*) parent = (pcb*) p1;
+    (pcb*) child = (pcb*)p2;
+    pte* pt1 = parent->page_table;
+    pte* pt2 = child->page_table;
+    unsigned long i;
 
+    // try to find a buffer in the region 0, if no available, find it in region 1
+    unsigned long entry_num = buf_region0();
+    void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_0_BASE);
+    TracePrintf("forkSwitch: find a entry %d in region0 %d", entry_num, vaddr_entry);
+    if (entry_num == -1) {
+        entry_num = buf_region1();
+        vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
+        TracePrintf("forkSwitch: find a entry %d in region1 %d", entry_num, vaddr_entry);
+    } 
+    // if no available in region 1, return process1 itself
+    if (entry_num == -1) {
+        return parent->ctx;
     }
+
+    // copy the page use the buffer
+    for (i = 0; i < PAGE_TABLE_LEN; i++) {
+        if (pt1[i].valid && i != entry_num) {
+            WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
+            memcpy(vaddr_entry, (void *)(long)((i * PAGESIZE) + VMEM_0_BASE), PAGESIZE);
+            pt2[i].valid = 1;
+            pt2[i].uprot = pt1[i].uprot;
+            pt2[i].kprot = pt2[i].kprot;
+            pt2[i].pgn = pt1[entry_num].pgn;
+            WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
+            pt1[entry_num].pgn = find_free_page();
+        }
+    }
+    // free the buffer and disable that entry in the page table
+    free_used_page(vaddr_entry);
+    pt1[entry_num].valid = 0;
+
+    // copy the saved context
+    memcpy(child->ctx, ctxp, sizeof(SavedContext));
+
+    // change the process to child, add the parent to the ready queue
+    WriteRegister(REG_PTR0, va2pa(unsigned long) pt2);
+    WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
+    cur_Proc = child;
+    add_readyQ(parent);
+    
+    return child->ctx;
 }
+
 
 /*************** Kernel Call ***************/
 /**
@@ -576,7 +631,7 @@ int MyBrk(void *addr) {
         for (i=brk_pgn;i>=addr_pgn;i--) {
             if (cur_Proc->page_table[i].valid == 1) {
                 cur_Proc->page_table[i].valid = 0;
-                free_used_page(cur_Proc->page_table[i]);
+                free_used_page(i*PAGESIZE);
             }   
         }
     }
@@ -608,29 +663,25 @@ int MyFork(void) {
 	if (used_pgn_count > free_addr_pgn) {
 		return -1;
 		TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
-	} else {
-        // create a new pcb, savedcontext, and a new page table for child
-        child = (pcb*) malloc(sizeof(pcb));
-        child->ctx = (SavedContext*) malloc(sizeof(SavedContext));
-        allocPageTable(child);
-        // copy pcb, savedcontext, pagetable from parent to child
-        child->pid=pid++;
-        child->child_num = 0;
-        child->clock_ticks = 0;
-        child->parent = cur_Proc;
-        child->brk = parent->brk;
-        // why need readynext in the pcb?
-
-        // copy content of parent to child: savedcontext and page table in the context switch
-       // ContextSwitch(switch_fork,parent->ctx, (void*) parent, (void*) child);
-        // run the child 
-        cur_Proc = child;
-        return 0;
-        TracePrintf(0,"fork : else");
     }
 
-   // ContextSwitch(parent->ctx,parent,child);
-    
+    // create a new pcb, savedcontext, and a new page table for child
+    child = (pcb*) malloc(sizeof(pcb));
+    child->ctx = (SavedContext*) malloc(sizeof(SavedContext));
+    allocPageTable(child);
+    // init the child's pcb
+    child->pid=pid++;
+    child->child_num = 0;
+    child->clock_ticks = 0;
+    child->parent = cur_Proc;
+    child->brk = parent->brk;
+    // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
+    ContextSwitch(forkSwitch(), parent->ctx, parent, child);
+    if (cur_Proc->pid == parent->pid) {
+        return child_pid;
+    } else {
+        return 0;
+    }
 }
 
 /*
@@ -811,12 +862,12 @@ unsigned long find_free_page() {
         return ret;
 }
 
-int free_used_page(pte *p) {
-    if (p == NULL)
+int free_used_page(void* addr) {
+    if (addr == NULL)
         return ERROR;
     // pfn to address ?= pfn * pagesize;
-    free((p->pfn) * PAGESIZE);
-    TracePrintf(0, "free the page number address %d", (p->pfn) * PAGESIZE);
+    free(addr);
+    TracePrintf(0, "free the page number address %d", addr);
     free_page *tmp = (free_page*) malloc(sizeof(free_page));
     tmp->next = head->next;
     head->next = tmp;
@@ -837,5 +888,43 @@ void *va2pa(void *va) {
         TracePrintf(2, "Va to Pa: Virtual address in region 0\n");
         return (void *)((long)cur_Proc->page_table[((long)DOWN_TO_PAGE(va) - VMEM_0_BASE) >> PAGESHIFT].pfn);
     }
+}
+
+// find the first unused pte number in the current process's page table
+unsigned long buf_region0() {
+    if (free_addr_pgn <= 0) return -1;
+    unsigned long entry_number;
+    pcb* curr = cur_Proc;
+    pte* curr_table = curr->page_table;
+    unsigned long i;
+    for (i = MEM_INVALID_PAGES; i < PAGE_TABLE_LEN - 5; i++) {
+        if (!curr_table[i] == valid){
+            curr_table[i].valid = 1;
+            curr.kprot = PROT_READ | PROT_WRITE;
+            curr.uprot = PROT_READ | PROT_EXEC;
+            curr.pfn = find_free_page();
+            entry_number = i;
+            return entry_number;
+        } 
+    }
+    return -1;
+}
+
+unsigned long buf_region1() {
+    if (free_addr_pgn <= 0) return -1;
+    unsigned long entry_number;
+    pte* curr_table = kernel_page_table;
+    unsigned long i;
+    for (i = 0; i < PAGE_TABLE_LEN; i++) {
+        if (!curr_table[i] == valid){
+            curr_table[i].valid = 1;
+            curr.kprot = PROT_READ | PROT_WRITE;
+            curr.uprot = PROT_NONE;
+            curr.pfn = find_free_page();
+            entry_number = i;
+            return entry_number;
+        } 
+    }
+    return -1;
 }
 
