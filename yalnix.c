@@ -547,40 +547,40 @@ the actual break sould be rounded up to the pagesize
 */
 int MyBrk(void *addr) {
     // invalid assign
-    if (addr == NULL)
-        return ERROR;
-
-    unsigned long addr_pgn = UP_TO_PAGE(addr) >> PAGESHIFT;
-    unsigned long brk_pgn = UP_TO_PAGE(cur_Proc->brk) >> PAGESHIFT;
-    unsigned long i;
-
-    if (addr_pgn >= user_stack_bott()-1)
-        return ERROR;
-
-    // allocate
-    if (addr_pgn >= brk_pgn) {
-        if (addr_pgn - brk_pgn>free_addr_pgn)
-            return ERROR;
-        
-        for (i=MEM_INVALID_PAGES;i<addr_pgn;i++) {
-            if (cur_Proc->page_table[i].valid == 0) {
-                cur_Proc->page_table[i].valid = 1;
-                cur_Proc->page_table[i].valid=1;
-                cur_Proc->page_table[i].uprot=PROT_READ|PROT_WRITE;
-                cur_Proc->page_table[i].kprot=PROT_READ|PROT_WRITE;
-                cur_Proc->page_table[i].pfn=find_free_page();
-            }
-        }
-    } else {
-        // deallocate
-        for (i=brk_pgn;i>=addr_pgn;i--) {
-            if (cur_Proc->page_table[i].valid == 1) {
-                cur_Proc->page_table[i].valid = 0;
-                free_used_page(cur_Proc->page_table[i]);
-            }   
-        }
-    }
-    cur_Proc->brk = (unsigned long)addr;
+//    if (addr == NULL)
+//        return ERROR;
+//
+//    unsigned long addr_pgn = UP_TO_PAGE(addr) >> PAGESHIFT;
+//    unsigned long brk_pgn = UP_TO_PAGE(cur_Proc->brk) >> PAGESHIFT;
+//    unsigned long i;
+//
+//    if (addr_pgn >= user_stack_bott()-1)
+//        return ERROR;
+//
+//    // allocate
+//    if (addr_pgn >= brk_pgn) {
+//        if (addr_pgn - brk_pgn>free_addr_pgn)
+//            return ERROR;
+//
+//        for (i=MEM_INVALID_PAGES;i<addr_pgn;i++) {
+//            if (cur_Proc->page_table[i].valid == 0) {
+//                cur_Proc->page_table[i].valid = 1;
+//                cur_Proc->page_table[i].valid=1;
+//                cur_Proc->page_table[i].uprot=PROT_READ|PROT_WRITE;
+//                cur_Proc->page_table[i].kprot=PROT_READ|PROT_WRITE;
+//                cur_Proc->page_table[i].pfn=find_free_page();
+//            }
+//        }
+//    } else {
+//        // deallocate
+//        for (i=brk_pgn;i>=addr_pgn;i--) {
+//            if (cur_Proc->page_table[i].valid == 1) {
+//                cur_Proc->page_table[i].valid = 0;
+//                free_used_page(cur_Proc->page_table[i]);
+//            }
+//        }
+//    }
+//    cur_Proc->brk = (unsigned long)addr;
     return 0;
 }
 
@@ -786,13 +786,13 @@ void add_delayQ(pcb *p) {
 
 
 // find out the bottom of the user stack
-unsigned long user_stack_bott(void) {
-    unsigned long bottom;
-//    bottom = KERNEL_STACK_BASE >> PAGESHIFT - 1;
-//    while (process_page_table[bottom].valid)
-//        bottom--;
-    return bottom;
-}
+//unsigned long user_stack_bott(void) {
+//    unsigned long bottom;
+////    bottom = KERNEL_STACK_BASE >> PAGESHIFT - 1;
+////    while (process_page_table[bottom].valid)
+////        bottom--;
+//    return bottom;
+//}
 
 /**
  * Return a free page pfn from the linked list
@@ -806,7 +806,7 @@ unsigned long find_free_page() {
         head->next = tmp->next;
         free_addr_pgn--;
         //unsigned long ret = tmp->phys_addr_pgn;
-        unsigned long ret = tmp->phys_addr_num;
+        unsigned long ret = tmp->phys_page_num;
 //      free(tmp);
 //      tmp = NULL;
         return ret;
