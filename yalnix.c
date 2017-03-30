@@ -588,7 +588,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     memcpy(child->ctx, ctxp, sizeof(SavedContext));
 
     // change the process to child, add the parent to the ready queue
-    WriteRegister(REG_PTR0, va2pa(unsigned long) pt2);
+    WriteRegister(REG_PTR0, va2pa((unsigned long) pt2));
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
     cur_Proc = child;
     add_readyQ(parent);
@@ -617,7 +617,8 @@ int MyDelay(int clock_ticks) {
     if(clock_ticks<0)
         return ERROR;
     cur_Proc->clock_ticks=clock_ticks;
-    if(clock_ticks>0){
+    if(clock_ticks>0 && readyQ != NULL){
+
         ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,readyQ);
         add_delayQ(cur_Proc);
     }
