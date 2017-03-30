@@ -153,13 +153,13 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         pointer->next = (free_page*) malloc(sizeof(free_page));
         pointer = pointer->next;
         free_addr_pgn++;
-        pointer->phys_addr_pgn = free_addr_pgn;
+        pointer->phys_page_num = free_addr_pgn;
     }
 
     pointer = head;
 	free_page *t;
     while (pointer->next!=NULL) {
-        if (pointer->next->phys_addr_pgn >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_addr_pgn<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
+        if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_page_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
             t = pointer->next;
             pointer->next = pointer->next->next;
             free_addr_pgn --;
