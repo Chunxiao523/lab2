@@ -557,17 +557,22 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     unsigned long i;
     // save the context to ctxp
     // return to the new context
-    (pcb*) parent = (pcb*) p1;
-    (pcb*) child = (pcb*)p2;
+    pcb* parent = (pcb*) p1;
+    pcb* child = (pcb*)p2;
     pte* pt1 = parent->page_table;
     pte* pt2 = child->page_table;
+<<<<<<< HEAD
+=======
+   // unsigned long i;
+>>>>>>> ef83460cba6438e79d759d98453caeaa663c4186
 
     // try to find a buffer in the region 0, if no available, find it in region 1
-    unsigned long entry_num = buf_region0();
+  //  unsigned long entry_num = buf_region0();
+    unsigned long entry_num = 0;
     void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_0_BASE);
     TracePrintf("forkSwitch: find a entry %d in region0 %d", entry_num, vaddr_entry);
     if (entry_num == -1) {
-        entry_num = buf_region1();
+       // entry_num = buf_region1();
         vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
         TracePrintf("forkSwitch: find a entry %d in region1 %d", entry_num, vaddr_entry);
     } 
@@ -584,9 +589,9 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
             pt2[i].valid = 1;
             pt2[i].uprot = pt1[i].uprot;
             pt2[i].kprot = pt2[i].kprot;
-            pt2[i].pgn = pt1[entry_num].pgn;
+         //   pt2[i].pgn = pt1[entry_num].pgn;
             WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
-            pt1[entry_num].pgn = find_free_page();
+         //   pt1[entry_num].pgn = find_free_page();
         }
     }
     // free the buffer and disable that entry in the page table
@@ -597,7 +602,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     memcpy(child->ctx, ctxp, sizeof(SavedContext));
 
     // change the process to child, add the parent to the ready queue
-    WriteRegister(REG_PTR0, va2pa(unsigned long) pt2);
+    WriteRegister(REG_PTR0, va2pa((unsigned long) pt2));
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
     cur_Proc = child;
     add_readyQ(parent);
@@ -630,11 +635,13 @@ int MyGetPid() {
  * Delay kernel call
  */
 int MyDelay(int clock_ticks) {
+    TracePrintf(0,"Kernel Call: Delay is called\n");
     int i;
     if(clock_ticks<0)
         return ERROR;
     cur_Proc->clock_ticks=clock_ticks;
-    if(clock_ticks>0){
+    if(clock_ticks>0 && readyQ != NULL){
+
         ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,readyQ);
         add_delayQ(cur_Proc);
     }
@@ -654,12 +661,12 @@ int MyBrk(void *addr) {
     unsigned long brk_pgn = UP_TO_PAGE(cur_Proc->brk) >> PAGESHIFT;
     unsigned long i;
 
-    if (addr_pgn >= user_stack_bott()-1)
-        return ERROR;
+//    if (addr_pgn >= user_stack_bott()-1)
+//        return ERROR;
 
     // allocate
     if (addr_pgn >= brk_pgn) {
-        if (addr_pgn - brk_pgn>free_addr_pgn)
+        if (addr_pgn - brk_pgn>free_page_num)
             return ERROR;
         
         for (i=MEM_INVALID_PAGES;i<addr_pgn;i++) {
@@ -721,7 +728,7 @@ int MyFork(void) {
     child->parent = cur_Proc;
     child->brk = parent->brk;
     // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
-    ContextSwitch(forkSwitch(), parent->ctx, parent, child);
+    //ContextSwitch(forkSwitch(), parent->ctx, parent, child);
     if (cur_Proc->pid == parent->pid) {
         return child_pid;
     } else {
@@ -985,40 +992,40 @@ void *va2pa(void *va) {
 }
 
 // find the first unused pte number in the current process's page table
-unsigned long buf_region0() {
-    if (free_addr_pgn <= 0) return -1;
-    unsigned long entry_number;
-    pcb* curr = cur_Proc;
-    pte* curr_table = curr->page_table;
-    unsigned long i;
-    for (i = MEM_INVALID_PAGES; i < PAGE_TABLE_LEN - 5; i++) {
-        if (!curr_table[i] == valid){
-            curr_table[i].valid = 1;
-            curr.kprot = PROT_READ | PROT_WRITE;
-            curr.uprot = PROT_READ | PROT_EXEC;
-            curr.pfn = find_free_page();
-            entry_number = i;
-            return entry_number;
-        } 
-    }
-    return -1;
-}
-
-unsigned long buf_region1() {
-    if (free_addr_pgn <= 0) return -1;
-    unsigned long entry_number;
-    pte* curr_table = kernel_page_table;
-    unsigned long i;
-    for (i = 0; i < PAGE_TABLE_LEN; i++) {
-        if (!curr_table[i] == valid){
-            curr_table[i].valid = 1;
-            curr.kprot = PROT_READ | PROT_WRITE;
-            curr.uprot = PROT_NONE;
-            curr.pfn = find_free_page();
-            entry_number = i;
-            return entry_number;
-        } 
-    }
-    return -1;
-}
+//unsigned long buf_region0() {
+//    if (free_page_num <= 0) return -1;
+//    unsigned long entry_number;
+//    pcb* curr = cur_Proc;
+//    pte* curr_table = curr->page_table;
+//    unsigned long i;
+//    for (i = MEM_INVALID_PAGES; i < PAGE_TABLE_LEN - 5; i++) {
+//        if (curr_table[i].valid == 0){
+//            curr_table[i].valid = 1;
+//            curr_table[i].kprot = PROT_READ | PROT_WRITE;
+//            curr_table[i].uprot = PROT_READ | PROT_EXEC;
+//            curr_table[i].pfn = find_free_page();
+//            entry_number = i;
+//            return entry_number;
+//        }
+//    }
+//    return -1;
+//}
+//
+//unsigned long buf_region1() {
+//    if (free_page_num <= 0) return -1;
+//    unsigned long entry_number;
+//    pte* curr_table = kernel_page_table;
+//    unsigned long i;
+//    for (i = 0; i < PAGE_TABLE_LEN; i++) {
+//        if (curr_table[i].valid == 0){
+//            curr_table[i].valid = 1;
+//            curr_table[i].kprot = PROT_READ | PROT_WRITE;
+//            curr_table[i].uprot = PROT_NONE;
+//            curr_table[i].pfn = find_free_page();
+//            entry_number = i;
+//            return entry_number;
+//        }
+//    }
+//    return -1;
+//}
 
