@@ -303,7 +303,7 @@ void TrapKernel(ExceptionInfo *info) {
 				(*info).regs[0] = NULL;
 				break;
 			case YALNIX_EXEC:
-				(*info).regs[0] = MyExec((char *)(info->regs[1]), (char **)(info->regs[2]));
+				(*info).regs[0] = MyExec(info, (char *)(info->regs[1]), (char **)(info->regs[2]));
 				break;
 			case YALNIX_EXIT:
 				(*info).regs[0] = MyExit((int)info->regs[1]);
@@ -653,9 +653,9 @@ int MyFork(void) {
 Replace the current process with process stored in filename
 if failure, return ERROR
 */
-int MyExec(char *filename, char **argvec) {
+int MyExec(ExceptionInfo *info, char *filename, char **argvec) {
     int status;
-    status = LoadProgram(filename, argvec, info, process_page_table);
+    status = LoadProgram(filename, argvec,info, process_page_table);
     if (status == -1)
         return ERROR;
     // if (status == -2)
