@@ -930,17 +930,17 @@ void *va2pa(void *va) {
 
 // find the first unused pte number in the current process's page table
 unsigned long buf_region0() {
-    if (free_addr_pgn <= 0) return -1;
+    if (free_page_num <= 0) return -1;
     unsigned long entry_number;
     pcb* curr = cur_Proc;
     pte* curr_table = curr->page_table;
     unsigned long i;
     for (i = MEM_INVALID_PAGES; i < PAGE_TABLE_LEN - 5; i++) {
-        if (!curr_table[i] == valid){
+        if (!curr_table[i] == 1){
             curr_table[i].valid = 1;
-            curr.kprot = PROT_READ | PROT_WRITE;
-            curr.uprot = PROT_READ | PROT_EXEC;
-            curr.pfn = find_free_page();
+            curr_table.kprot = PROT_READ | PROT_WRITE;
+            curr_table.uprot = PROT_READ | PROT_EXEC;
+            curr_table.pfn = find_free_page();
             entry_number = i;
             return entry_number;
         } 
