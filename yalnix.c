@@ -122,10 +122,10 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
     readyQ = (pcb *)malloc(sizeof(pcb));
     delayQ = (pcb *)malloc(sizeof(pcb));
-   // readyQ = NULL;
-   // delayQ = NULL;
-    readyQ->readynext = NULL;
-    delayQ->delaynext = NULL;
+    readyQ = NULL;
+    delayQ = NULL;
+   // readyQ->readynext = NULL;
+   // delayQ->delaynext = NULL;
 	/*
 	 * Initialize the interrupt table
 	 * You need to initialize page table entries for Region 1 for the kernel's text, data, bss, and heap,
