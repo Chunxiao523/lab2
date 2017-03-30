@@ -788,9 +788,9 @@ void add_delayQ(pcb *p) {
 // find out the bottom of the user stack
 unsigned long user_stack_bott(void) {
     unsigned long bottom;
-    bottom = KERNEL_STACK_BASE >> PAGESHIFT - 1;
-    while (process_page_table[bottom].valid)
-        bottom--;
+//    bottom = KERNEL_STACK_BASE >> PAGESHIFT - 1;
+//    while (process_page_table[bottom].valid)
+//        bottom--;
     return bottom;
 }
 
@@ -805,7 +805,7 @@ unsigned long find_free_page() {
         free_page *tmp = head->next;
         head->next = tmp->next;
         free_addr_pgn--;
-        unsigned long ret = tmp->phys_addr_pgn;
+      //  unsigned long ret = tmp->phys_addr_pgn;
 //      free(tmp);
 //      tmp = NULL;
         return ret;
