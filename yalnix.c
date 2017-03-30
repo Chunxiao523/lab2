@@ -555,6 +555,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
 
     // try to find a buffer in the region 0, if no available, find it in region 1
   //  unsigned long entry_num = buf_region0();
+    unsigned long entry_num = 0;
     void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_0_BASE);
     TracePrintf("forkSwitch: find a entry %d in region0 %d", entry_num, vaddr_entry);
     if (entry_num == -1) {
