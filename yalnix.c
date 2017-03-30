@@ -45,6 +45,7 @@ typedef struct pcb {
     struct pcb *parent;
     struct pcb *readynext;
     struct pcb *delaynext;
+    struct pcb *delaypre;
     struct proc_queue *status_queue;
     unsigned long brk;
 } pcb;
@@ -75,7 +76,7 @@ typedef void (*interrupt_handler)(ExceptionInfo *info);
  */
 free_page *head;
 
-int free_addr_pgn = 0;
+int free_page_num;
 
 /*
 define the terminals, which holds the read queue, write queue, readbuffer, writebuffer for each terms
@@ -120,7 +121,7 @@ void *va2pa(void *va);
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, char **cmd_args) {
     unsigned int i;
     TracePrintf(1, "Kernel Start: KernelStart called with num physical pages: %d.\n", pmem_size/PAGESIZE);
-    free_addr_pgn = 0;
+    free_page_num = 0;
 	kernel_cur_break = orig_brk;
 
 	kernel_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
@@ -129,8 +130,10 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
     readyQ = (pcb *)malloc(sizeof(pcb));
     delayQ = (pcb *)malloc(sizeof(pcb));
-    readyQ->readynext = NULL;
-    delayQ->delaynext = NULL;
+    readyQ = NULL;
+    delayQ = NULL;
+   // readyQ->readynext = NULL;
+   // delayQ->delaynext = NULL;
 	/*
 	 * Initialize the interrupt table
 	 * You need to initialize page table entries for Region 1 for the kernel's text, data, bss, and heap,
@@ -157,19 +160,19 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     head = (free_page*) malloc(sizeof(free_page));
 	free_page *pointer = head;
     for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
-        pointer->next = (free_page*) malloc(sizeof(free_page));
+        pointer->next = (free_page*)malloc(sizeof(free_page));
         pointer = pointer->next;
-        free_addr_pgn++;
-        pointer->phys_addr_pgn = free_addr_pgn;
+        free_page_num++;
+        pointer->phys_page_num = free_page_num;
     }
 
     pointer = head;
 	free_page *t;
     while (pointer->next!=NULL) {
-        if (pointer->next->phys_addr_pgn >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_addr_pgn<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
+        if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_page_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
             t = pointer->next;
             pointer->next = pointer->next->next;
-            free_addr_pgn --;
+            free_page_num --;
             free(t);
         }
         else pointer = pointer->next;
@@ -214,7 +217,6 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     }
     for (addr = KERNEL_STACK_BASE; addr < VMEM_0_LIMIT; addr+= PAGESIZE) {
     	i = (addr - VMEM_0_BASE)>>PAGESHIFT; //VMEM_0_BASE = 0
-        TracePrintf(2, "Kernel Start: kernel stack number %d\n", i);
     	process_page_table[i].pfn = addr>>PAGESHIFT;
         process_page_table[i].valid = 1;
         process_page_table[i].kprot = PROT_READ|PROT_WRITE;
@@ -233,37 +235,52 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 	WriteRegister(REG_VM_ENABLE, 1);
 	vir_mem = 1;
     TracePrintf(2, "Kernel Start: virtual memory enabled.\n");
-
-	/*
+    if(cmd_args[0] == NULL) {
+        /*
 	 * Create idle and init process
 	 */
-	idle = (pcb*)malloc(sizeof(pcb));
-    idle->pid = pid;
-    idle->page_table = idle_page_table;
-	pid ++;
-    idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
-    TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
+        idle = (pcb*)malloc(sizeof(pcb));
+        idle->pid = pid;
+        idle->page_table = idle_page_table;
+        pid ++;
+        idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
+        TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
 
-	init = (pcb *) malloc(sizeof(pcb));
-	init->pid = pid;
-    init->page_table = process_page_table;
-	pid ++;
-	init->ctx = (SavedContext *)malloc(sizeof(SavedContext));
-	cur_Proc = init;
+        init = (pcb *) malloc(sizeof(pcb));
+        init->pid = pid;
+        init->page_table = process_page_table;
+        pid ++;
+        init->ctx = (SavedContext *)malloc(sizeof(SavedContext));
+        cur_Proc = init;
 
-    LoadProgram("init",cmd_args,info, process_page_table);
-    TracePrintf(2, "Kernel Start: init process pcb initialized.\n");
+        LoadProgram("init",cmd_args,info, process_page_table);
+        TracePrintf(2, "Kernel Start: init process pcb initialized.\n");
 
-	ContextSwitch(MyKernelSwitchFunc, init->ctx, (void *) cur_Proc, (void *) idle);
-    TracePrintf(2, "Kernel Start: Context Switch finished.\n");
-    LoadProgram("idle",cmd_args,info, idle->page_table);
-    cur_Proc = idle;
+        ContextSwitch(MyKernelSwitchFunc, init->ctx, (void *) cur_Proc, (void *) idle);
+        TracePrintf(2, "Kernel Start: Context Switch finished.\n");
+        LoadProgram("idle",cmd_args,info, idle->page_table);
+        cur_Proc = idle;
+        TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
+    } else {
+        cur_Proc= (pcb *)malloc(sizeof(pcb));
+        TracePrintf(2, "Kernel Start:Load process from argument.\n");
+        LoadProgram(cmd_args[0],cmd_args,info, process_page_table);
+        TracePrintf(2, "Kernel Start:Load process back.\n");
+        cur_Proc->page_table = process_page_table;
+        cur_Proc->pid = pid++;
+        cur_Proc->ctx = (SavedContext *)malloc(sizeof(SavedContext));
+        TracePrintf(2, "Kernel Start: Load process from argument finished.\n");
+    }
+
 }
 /**
  * SetKernelBrk
  */
 int SetKernelBrk(void *addr) {
-	if ((unsigned long *)addr >= VMEM_1_LIMIT || (unsigned long *)addr < VMEM_1_BASE) return -1;
+	if ((unsigned long *)addr >= VMEM_1_LIMIT || (unsigned long *)addr < VMEM_1_BASE) {
+        TracePrintf(2, "Set Kernel brk: add invalid!\n");
+        return -1;
+    }
 	if (vir_mem == 0) {
 		kernel_cur_break = addr;
 	} else {
@@ -273,7 +290,11 @@ int SetKernelBrk(void *addr) {
 		if(addr > kernel_cur_break) {
 			TracePrintf(2, "Set kernel brk: addr > kernel_cur_break \n");
 			int i;
-            if ( DOWN_TO_PAGE(*(unsigned long *)addr) - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_addr_pgn) return -1;
+            if ( UP_TO_PAGE(addr) - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_page_num) {
+                TracePrintf(2, "Set Kernel brk: Not enough pages\n");
+                return -1;
+            }
+            TracePrintf(2, "Set Kernel brk: working now!...\n");
 			/* Given a virtual page number, assign a physical page to its corresponding pte entry */
 			for(i = (UP_TO_PAGE(kernel_cur_break) - VMEM_1_BASE)>>PAGESHIFT; i < (UP_TO_PAGE(addr) - VMEM_1_BASE)>>PAGESHIFT; i++) {
                 kernel_page_table[i].pfn = find_free_page();
@@ -300,10 +321,10 @@ void TrapKernel(ExceptionInfo *info) {
 				(*info).regs[0] = NULL;
 				break;
 			case YALNIX_EXEC:
-				(*info).regs[0] = NULL;
+				(*info).regs[0] = MyExec(info, (char *)(info->regs[1]), (char **)(info->regs[2]));
 				break;
 			case YALNIX_EXIT:
-				(*info).regs[0] = NULL;
+				(*info).regs[0] = MyExit((int)info->regs[1]);
 				break;
 			case YALNIX_WAIT:
 				(*info).regs[0] = NULL;
@@ -330,17 +351,24 @@ void TrapKernel(ExceptionInfo *info) {
 void TrapClock(ExceptionInfo *info) {
     TracePrintf(2, "Kernel call: Trap clock\n");
     pcb *temp = delayQ;
-    while (temp->delaynext != NULL){
-        temp->delaynext->clock_ticks --;
-        if(temp->clock_ticks == 0) {
-            //add to ready queue
-            add_readyQ(temp->delaynext);
-            temp -> delaynext = temp->delaynext->delaynext;
-        }else {
+
+        while (temp != NULL){
+            //  TracePrintf(2, "Kernel call: Trap clock\n");
+            temp->clock_ticks --;
+            TracePrintf(2, "Kernel call: Trap clock, delayQ clock ticks changes to %d\n", temp->delaynext->clock_ticks);
+            if(temp->clock_ticks == 0) {
+                //add to ready queue
+                add_readyQ(temp);
+                temp -> delaypre -> delaynext = temp->delaynext;
+            }
             temp = temp->delaynext;
         }
+
+
+    if (readyQ != NULL) {
+        ContextSwitch(clockSwitch, cur_Proc->ctx, cur_Proc, readyQ);
     }
-    ContextSwitch(clockSwitch, cur_Proc->ctx, cur_Proc, readyQ);
+    TracePrintf(2, "Kernel call: Finish one clock\n");
 }
 void TrapIllegal(ExceptionInfo *info) {
 	 printf("[TRAP_ILLEGAL] Trapped Illegal Instruction, pid %d\n", 0);
@@ -457,7 +485,6 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
             * Find the first invalid page in p1_pt, as a buffer to help copy the kernel stack content
             */
            if (p1_pt[temp].valid == 0) {
-               TracePrintf(2, "Context Switch: Copying...   %d\n", temp );
                p1_pt[temp].valid = 1;
                p1_pt[temp].uprot = PROT_READ | PROT_EXEC;
                p1_pt[temp].kprot = PROT_READ | PROT_WRITE;
@@ -588,7 +615,7 @@ int MyDelay(int clock_ticks) {
     int i;
     if(clock_ticks<0)
         return ERROR;
-     cur_Proc->clock_ticks=clock_ticks;
+    cur_Proc->clock_ticks=clock_ticks;
     if(clock_ticks>0){
         ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,readyQ);
         add_delayQ(cur_Proc);
@@ -660,7 +687,7 @@ int MyFork(void) {
     }
 
     // check if there is enough physical mem for the child
-	if (used_pgn_count > free_addr_pgn) {
+	if (used_pgn_count > free_page_num) {
 		return -1;
 		TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
     }
@@ -688,15 +715,17 @@ int MyFork(void) {
 Replace the current process with process stored in filename
 if failure, return ERROR
 */
-int MyExec(char *filename, char **argvec, ExceptionInfo *info, struct pte *process_page_table) {
+int MyExec(ExceptionInfo *info, char *filename, char **argvec) {
+    TracePrintf(0,"Kernel Call: EXEC called! .\n", filename);
     int status;
-    status = LoadProgram(filename, argvec, info, process_page_table);
+    status = LoadProgram(filename, argvec,info, process_page_table);
     if (status == -1)
         return ERROR;
     // if (status == -2)
-        // MyExit(ERROR);
+       // MyExit(ERROR);
+    TracePrintf(0,"Kernel Call: EXEC load %c successfully.\n", filename);
     return 0;
-	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+//
 }
 
 /*
@@ -710,21 +739,19 @@ void MyExit(int status){
 
     struct pcb *next_Proc;
 
-    // // if it is idle, idle would never exit
-    // if (cur_Proc->pid == 0)
-    //     return
+     // if it is idle, idle would never exit
+     if (cur_Proc->pid == 0)
+         return;
 
-    // // if it is init
-    // if (cur_Proc->pid == 1) 
-    //     Halt();
+     // if it is init
+     if (cur_Proc->pid == 1)
+         Halt();
 
-    // // find the next process to run
-    // cur_Proc = next_Proc;
-    // next_Proc = 
+     // find the next process to run
+//     cur_Proc = readyQ;
+//     next_Proc =
 
-
- return ;
-	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+	TracePrintf(0,"Kernel call: Exit!.\n");
 }
 
 /*
@@ -828,22 +855,30 @@ void add_readyQ(pcb *p) {
 void add_delayQ(pcb *p) {
     // Add Current Process to the tail of delayQ
     pcb *temp = delayQ;
+    if (temp == NULL) {
+        delayQ = cur_Proc;
+        cur_Proc->delaynext = NULL;
+        cur_Proc->delaypre = NULL;
+        return;
+    }
+
     while(temp->delaynext != NULL) {
         temp = temp->delaynext;
     }
+    cur_Proc->delaypre = temp;
     cur_Proc->delaynext = temp->delaynext;
     temp->delaynext = cur_Proc;
 }
 
 
 // find out the bottom of the user stack
-unsigned long user_stack_bott(void) {
-    unsigned long bottom;
-    bottom = KERNEL_STACK_BASE >> PAGESHIFT - 1;
-    while (process_page_table[bottom].valid)
-        bottom--;
-    return bottom;
-}
+//unsigned long user_stack_bott(void) {
+//    unsigned long bottom;
+////    bottom = KERNEL_STACK_BASE >> PAGESHIFT - 1;
+////    while (process_page_table[bottom].valid)
+////        bottom--;
+//    return bottom;
+//}
 
 /**
  * Return a free page pfn from the linked list
@@ -855,8 +890,9 @@ unsigned long find_free_page() {
         }
         free_page *tmp = head->next;
         head->next = tmp->next;
-        free_addr_pgn--;
-        unsigned long ret = tmp->phys_addr_pgn;
+        free_page_num--;
+        //unsigned long ret = tmp->phys_addr_pgn;
+        unsigned long ret = tmp->phys_page_num;
 //      free(tmp);
 //      tmp = NULL;
         return ret;
