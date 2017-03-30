@@ -252,6 +252,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     TracePrintf(2, "Kernel Start: Context Switch finished.\n");
     LoadProgram("idle",cmd_args,info, idle->page_table);
     cur_Proc = idle;
+    TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
 }
 /**
  * SetKernelBrk
@@ -304,7 +305,7 @@ void TrapKernel(ExceptionInfo *info) {
 				(*info).regs[0] = NULL;
 				break;
 			case YALNIX_EXIT:
-				(*info).regs[0] = NULL;
+				(*info).regs[0] = MyExit((int)info->regs[1]);
 				break;
 			case YALNIX_WAIT:
 				(*info).regs[0] = NULL;
@@ -465,7 +466,6 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
             * Find the first invalid page in p1_pt, as a buffer to help copy the kernel stack content
             */
            if (p1_pt[temp].valid == 0) {
-               TracePrintf(2, "Context Switch: Copying...   %d\n", temp );
                p1_pt[temp].valid = 1;
                p1_pt[temp].uprot = PROT_READ | PROT_EXEC;
                p1_pt[temp].kprot = PROT_READ | PROT_WRITE;
@@ -548,7 +548,7 @@ int MyDelay(int clock_ticks) {
     int i;
     if(clock_ticks<0)
         return ERROR;
-     cur_Proc->clock_ticks=clock_ticks;
+    cur_Proc->clock_ticks=clock_ticks;
     if(clock_ticks>0){
         ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,readyQ);
         add_delayQ(cur_Proc);
@@ -674,21 +674,19 @@ void MyExit(int status){
 
     struct pcb *next_Proc;
 
-    // // if it is idle, idle would never exit
-    // if (cur_Proc->pid == 0)
-    //     return
+     // if it is idle, idle would never exit
+     if (cur_Proc->pid == 0)
+         return;
 
-    // // if it is init
-    // if (cur_Proc->pid == 1) 
-    //     Halt();
+     // if it is init
+     if (cur_Proc->pid == 1)
+         Halt();
 
-    // // find the next process to run
-    // cur_Proc = next_Proc;
-    // next_Proc = 
+     // find the next process to run
+//     cur_Proc = readyQ;
+//     next_Proc =
 
-
- return ;
-	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+	TracePrintf(0,"Kernel call: Exit!.\n");
 }
 
 /*
@@ -813,7 +811,6 @@ void add_delayQ(pcb *p) {
  * Return a free page pfn from the linked list
  */
 unsigned long find_free_page() {
-    TracePrintf(2, "Find free page: finding...\n");
         if (head->next==NULL) {
             TracePrintf(2, "Find Free Page: list is empty \n");
             return 0;
