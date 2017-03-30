@@ -255,6 +255,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         cur_Proc = idle;
         TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
     } else {
+        cur_Proc= (pcb *)malloc(sizeof(pcb));
         TracePrintf(2, "Kernel Start:Load process from argument.\n");
         LoadProgram(cmd_args[0],cmd_args,info, process_page_table);
         TracePrintf(2, "Kernel Start:Load process back.\n");
