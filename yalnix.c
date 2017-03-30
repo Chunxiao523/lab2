@@ -68,7 +68,7 @@ typedef void (*interrupt_handler)(ExceptionInfo *info);
  */
 free_page *head;
 
-int free_addr_pgn = 0;
+int free_page_num = 0;
 
 /*
 define the terminals, which holds the read queue, write queue, readbuffer, writebuffer for each terms
@@ -113,7 +113,7 @@ void *va2pa(void *va);
 void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, char **cmd_args) {
     unsigned int i;
     TracePrintf(1, "Kernel Start: KernelStart called with num physical pages: %d.\n", pmem_size/PAGESIZE);
-    free_addr_pgn = 0;
+    free_page_num = 0;
 	kernel_cur_break = orig_brk;
 
 	kernel_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
@@ -152,8 +152,8 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     for(i = PMEM_BASE; i < PMEM_BASE + pmem_size; i += PAGESIZE) {
         pointer->next = (free_page*) malloc(sizeof(free_page));
         pointer = pointer->next;
-        free_addr_pgn++;
-        pointer->phys_page_num = free_addr_pgn;
+        free_page_num++;
+        pointer->phys_page_num = free_page_num;
     }
 
     pointer = head;
@@ -162,7 +162,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         if (pointer->next->phys_page_num >= (KERNEL_STACK_BASE>>PAGESHIFT) && pointer->next->phys_page_num<((unsigned long)kernel_cur_break>>PAGESHIFT)) {
             t = pointer->next;
             pointer->next = pointer->next->next;
-            free_addr_pgn --;
+            free_page_num --;
             free(t);
         }
         else pointer = pointer->next;
@@ -266,7 +266,7 @@ int SetKernelBrk(void *addr) {
 		if(addr > kernel_cur_break) {
 			TracePrintf(2, "Set kernel brk: addr > kernel_cur_break \n");
 			int i;
-            if ( DOWN_TO_PAGE(*(unsigned long *)addr) - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_addr_pgn) return -1;
+            if ( DOWN_TO_PAGE(*(unsigned long *)addr) - UP_TO_PAGE(kernel_cur_break) > PAGESIZE*free_page_num) return -1;
 			/* Given a virtual page number, assign a physical page to its corresponding pte entry */
 			for(i = (UP_TO_PAGE(kernel_cur_break) - VMEM_1_BASE)>>PAGESHIFT; i < (UP_TO_PAGE(addr) - VMEM_1_BASE)>>PAGESHIFT; i++) {
                 kernel_page_table[i].pfn = find_free_page();
@@ -559,7 +559,7 @@ int MyBrk(void *addr) {
 //
 //    // allocate
 //    if (addr_pgn >= brk_pgn) {
-//        if (addr_pgn - brk_pgn>free_addr_pgn)
+//        if (addr_pgn - brk_pgn>free_page_num)
 //            return ERROR;
 //
 //        for (i=MEM_INVALID_PAGES;i<addr_pgn;i++) {
@@ -605,7 +605,7 @@ int MyFork(void) {
     }
 
     // check if there is enough physical mem for the child
-	if (used_pgn_count > free_addr_pgn) {
+	if (used_pgn_count > free_page_num) {
 		return -1;
 		TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 	} else {
@@ -804,7 +804,7 @@ unsigned long find_free_page() {
         }
         free_page *tmp = head->next;
         head->next = tmp->next;
-        free_addr_pgn--;
+        free_page_num--;
         //unsigned long ret = tmp->phys_addr_pgn;
         unsigned long ret = tmp->phys_page_num;
 //      free(tmp);
