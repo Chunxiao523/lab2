@@ -4,7 +4,7 @@
 #include <comp421/hardware.h>
 
 int
-main(int argc, char **argv)
+main()
 {
     fprintf(stderr, "Starting delay...\n");
     Delay(5);
