@@ -368,8 +368,11 @@ void TrapClock(ExceptionInfo *info) {
         TracePrintf(2, "Kernel call: Trap clock, delayQ clock ticks changes to %d\n", temp->clock_ticks);
         if(temp->clock_ticks == 0) {
             //add to ready queue
+            TracePrintf(2, "Kernel call: Trap clock, delayQ clock ticks changes to %d\n", temp->clock_ticks);
             add_readyQ(temp);
-            temp -> delaypre -> delaynext = temp->delaynext;
+            if (temp->delaypre != NULL) {
+                temp -> delaypre -> delaynext = temp->delaynext;
+            }
         }
         temp = temp->delaynext;
     }
@@ -673,7 +676,6 @@ int MyDelay(int clock_ticks) {
     if(clock_ticks<0)
         return ERROR;
     cur_Proc->clock_ticks=clock_ticks;
-    TracePrintf(2, "Kernel call: delay clock value is \n", cur_Proc->clock_ticks);
     if(clock_ticks>0){
         add_delayQ(cur_Proc);
         ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,readyQ);
@@ -931,6 +933,7 @@ void allocPageTable(pcb* p) {
 //}
 
 void add_readyQ(pcb *p) {
+    TracePrintf(2, "Add a new process to ready queue\n");
     pcb *temp = readyQ;
     if (temp == NULL) {
         readyQ = p;
