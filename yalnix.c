@@ -6,7 +6,7 @@
 void *kernel_cur_break;
 
 
-"fjfkalsjfdlas"
+
 
 /*
  * flag to indicate if you have yet enabled virtual memory
@@ -51,6 +51,7 @@ typedef struct pcb {
     struct pcb *waitnext;
     struct pcb *delaypre;
     struct pcb *childQ;
+    struct pcb *childnext;
     struct Child *statusQ;
 
     unsigned long brk;
@@ -76,10 +77,10 @@ pcb *waitQ;
 /*
  * child of a process which store its pid and status
  */
-typedef struct child_node{
+typedef struct ChildStatus{
     int pid;
     int status;
-    struct child_node *next;
+    struct ChildStatus *next;
 } ChildStatus;
 
 /*
@@ -581,8 +582,10 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     unsigned long i;
     // save the context to ctxp
     // return to the new context
-    (pcb*) parent = (pcb*) p1;
-    (pcb*) child = (pcb*)p2;
+    pcb* parent;
+    pcb* child;
+    parent = (pcb*) p1;
+    child = (pcb*)p2;
     pte* pt1 = parent->page_table;
     pte* pt2 = child->page_table;
 
@@ -608,9 +611,9 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
             pt2[i].valid = 1;
             pt2[i].uprot = pt1[i].uprot;
             pt2[i].kprot = pt2[i].kprot;
-            pt2[i].pgn = pt1[entry_num].pgn;
+            pt2[i].pfn = pt1[entry_num].pfn;
             WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
-            pt1[entry_num].pgn = find_free_page();
+            pt1[entry_num].pfn = find_free_page();
         }
     }
     // free the buffer and disable that entry in the page table
@@ -621,7 +624,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     memcpy(child->ctx, ctxp, sizeof(SavedContext));
 
     // change the process to child, add the parent to the ready queue
-    WriteRegister(REG_PTR0, va2pa(unsigned long) pt2);
+    WriteRegister(REG_PTR0, va2pa((unsigned long) pt2));
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
     cur_Proc = child;
     add_readyQ(parent);
@@ -637,7 +640,7 @@ SavedContext *exitSwitch(SavedContext *ctxp, void *p1, void *p2) {
 
     // free the used page
     for (i = 0; i < PAGE_TABLE_LEN; i++) {
-        if (pt[i] == valid) {
+        if (pt[i].valid) {
             free_used_page((long) (i * PAGESIZE + VMEM_0_BASE));
         }
     }
@@ -700,7 +703,7 @@ int MyBrk(void *addr) {
 
     // allocate
     if (addr_pgn >= brk_pgn) {
-        if (addr_pgn - brk_pgn>free_addr_pgn)
+        if (addr_pgn - brk_pgn>free_page_num)
             return ERROR;
         
         for (i=MEM_INVALID_PAGES;i<addr_pgn;i++) {
@@ -762,7 +765,7 @@ int MyFork(void) {
     child->parent = cur_Proc;
     child->brk = parent->brk;
     // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
-    ContextSwitch(forkSwitch(), parent->ctx, parent, child);
+    ContextSwitch(forkSwitch, parent->ctx, parent, child);
     if (cur_Proc->pid == parent->pid) {
         return child_pid;
     } else {
@@ -803,31 +806,31 @@ if a child is terminate, it report status to its wait parent
 if a parent is terminate, its child's parent become null
 when a process exit, its resourses should be freed
 */
-void MyExit(int status){
+// int MyExit(int status){
 
-    // put child into parent child
-    if (cur_Proc->parent != NULL) {
-        add_statusQ(cur_Proc);
-    }
-    // if it is parent, child delete parent
-    pcb *tmp = cur_Proc->childQ;
-    while(tmp != NULL) {
-        tmp->parent = NULL;
-        tmp = tmp->childnext;
-    }
+//     // put child into parent child
+//     if (cur_Proc->parent != NULL) {
+//         add_statusQ(cur_Proc);
+//     }
+//     // if it is parent, child delete parent
+//     pcb *tmp = cur_Proc->childQ;
+//     while(tmp != NULL) {
+//         tmp->parent = NULL;
+//         tmp = tmp->childnext;
+//     }
 
-    if (cur_Proc->pid == 0) 
-        return;
-    if (cur_Proc->pid == 1){
-        Halt();
-        return;
-    }
+//     if (cur_Proc->pid == 0) 
+//         return -1;
+//     if (cur_Proc->pid == 1){
+//         Halt();
+//         return -1;
+//     }
+//     return 0;
 
-
-    ContextSwitch(delayContextSwitch(), cur_Proc->ctx,cur_Proc,get_readyQ());
-    //  free the resources it used
-    struct pcb *next_Proc;
-}
+//     ContextSwitch(delayContextSwitch, cur_Proc->ctx,cur_Proc,get_readyQ());
+//     //  free the resources it used
+//     struct pcb *next_Proc;
+// }
 
 /*
 
@@ -840,23 +843,24 @@ calls exits or is terminated by the kernel (if a process is terminated by the ke
 On success, the Wait call returns the process ID of the child process and that child’s exit status is copied to the integer pointed to 
 by the status_ptr argument. On any error, this call instead returns ERROR.
 */
-int MyWait(int *status_ptr) {
+// int MyWait(int *status_ptr) {
 
-    int return_pid;
-    pcb *tmp = cur_Proc;
-    // if calling process have no child, return ERROR
-    if (cur_Proc->child_num == 0) 
-        return ERROR;
-    // if child queue is empty, block the calling process, return until one child is exit or terminated
-    if (cur_Proc->child == NULL) {
-        ContextSwitch(delayContextSwitch(), cur_Proc->ctx,cur_Proc,get_readyQ());
-        add_waitQ(tmp);
-        return 
-    }
-    return_pid = tmp->child->pid;
-    *status_ptr = tmp->child->status;
-    return return_pid;
-}
+//     int return_pid;
+//     pcb *tmp = cur_Proc;
+//     // if calling process have no child, return ERROR
+//     if (cur_Proc->child_num == 0) 
+//         return ERROR;
+//     // if child queue is empty, block the calling process, return until one child is exit or terminated
+//     if (cur_Proc->childQ == NULL) {
+//         ContextSwitch(delayContextSwitch(), cur_Proc->ctx,cur_Proc,get_readyQ());
+//         add_waitQ(tmp);
+//         return 
+//     }
+//     return_pid = tmp->childQ->pid;
+//     *status_ptr = tmp->childQ->status;
+
+//     return return_pid;
+// }
 
 /*Read the next line of input (or a portion of it) from terminal tty_id, copying the bytes of input into the buffer referenced by buf. 
 The maximum length of the line to be returned is given by len. A value of 0 for len is not in itself an error, as this simply means to 
@@ -940,11 +944,11 @@ void add_readyQ(pcb *p) {
 }
 
 pcb *get_readyQ() {
-    if (readQ == NULL) {
+    if (readyQ == NULL) {
         return ERROR;
     }
-    pcb *tmp = readQ;
-    readQ = readQ->readynext;
+    pcb *tmp = readyQ;
+    readyQ = readyQ->readynext;
     tmp->readynext = NULL;
     return tmp;
 }
@@ -967,23 +971,23 @@ void add_delayQ(pcb *p) {
     temp->delaynext = cur_Proc;
 }
 
-void add_waitQ(pcb *p) {
-    pcb *tmp = waitQ;
-    while(tmp != NULL) {
-        tmp = tmp->waitnext;
-    }
-    *tmp = p;
-}
+// void add_waitQ(pcb *p) {
+//     pcb *tmp = waitQ;
+//     while(tmp != NULL) {
+//         tmp = tmp->waitnext;
+//     }
+//     *tmp = p;
+// }
 
-pcb *get_waitQ() {
-    if (waitQ == NULL) {
-        return ERROR;
-    }
-    pcb *tmp = waitQ;
-    waitQ = waitQ->waitnext;
-    tmp->waitnext = NULL;
-    return tmp;
-}
+// pcb *get_waitQ() {
+//     if (waitQ == NULL) {
+//         return ERROR;
+//     }
+//     pcb *tmp = waitQ;
+//     waitQ = waitQ->waitnext;
+//     tmp->waitnext = NULL;
+//     return tmp;
+// }
 
 // add p to its parent's childQ
 void add_childQ(pcb *p) {
@@ -994,24 +998,29 @@ void add_childQ(pcb *p) {
     *tmp = p;
 }
 
-// add pcb p's pid and status to the statusQ of its parent
-void add_statusQ(pcb *p) {
-    ChildStatus *tmp = p->parent->statusQ;
-    while(tmp != NULL) {
-        tmp = tmp->next;
-    }
-    tmp = (ChildStatus*)malloc(sizeof(Child));
-    tmp->pid = p->pid;
-    tmp->status = p->status;
-}
+// get the first child of the given pcb p
+// Child get_childQ(pcb *p) {
+//     Child 
+// }
 
-ChildStatus *get_statusQ(pcb *p) {
-    if (p->statusQ == NULL)
-        return ERROR;
-    ChildStatus *tmp = p->statusQ;
-    p->statusQ = p->statusQ->next;
-    return return_child;
-}
+// add pcb p's pid and status to the statusQ of its parent
+// void add_statusQ(pcb *p) {
+//     ChildStatus *tmp = p->parent->statusQ;
+//     while(tmp != NULL) {
+//         tmp = tmp->next;
+//     }
+//     tmp = (ChildStatus*)malloc(sizeof(Child));
+//     tmp->pid = p->pid;
+//     tmp->status = p->status;
+// }
+
+// ChildStatus *get_statusQ(pcb *p) {
+//     if (p->statusQ == NULL)
+//         return ERROR;
+//     ChildStatus *tmp = p->statusQ;
+//     p->statusQ = p->statusQ->next;
+//     return tmp;
+// }
 
 // find out the bottom of the user stack
 //unsigned long user_stack_bott(void) {
@@ -1073,40 +1082,40 @@ void *va2pa(void *va) {
 }
 
 // find the first unused pte number in the current process's page table
-unsigned long buf_region0() {
-    if (free_addr_pgn <= 0) return -1;
-    unsigned long entry_number;
-    pcb* curr = cur_Proc;
-    pte* curr_table = curr->page_table;
-    unsigned long i;
-    for (i = MEM_INVALID_PAGES; i < PAGE_TABLE_LEN - 5; i++) {
-        if (!curr_table[i] == valid){
-            curr_table[i].valid = 1;
-            curr.kprot = PROT_READ | PROT_WRITE;
-            curr.uprot = PROT_READ | PROT_EXEC;
-            curr.pfn = find_free_page();
-            entry_number = i;
-            return entry_number;
-        } 
-    }
-    return -1;
-}
+// unsigned long buf_region0() {
+//     if (free_page_num <= 0) return -1;
+//     unsigned long entry_number;
+//     pcb* curr = cur_Proc;
+//     pte* curr_table = curr->page_table;
+//     unsigned long i;
+//     for (i = MEM_INVALID_PAGES; i < PAGE_TABLE_LEN - 5; i++) {
+//         if (!curr_table[i].valid){
+//             curr_table[i].valid = 1;
+//             curr.kprot = PROT_READ | PROT_WRITE;
+//             curr.uprot = PROT_READ | PROT_EXEC;
+//             curr.pfn = find_free_page();
+//             entry_number = i;
+//             return entry_number;
+//         } 
+//     }
+//     return -1;
+// }
 
-unsigned long buf_region1() {
-    if (free_addr_pgn <= 0) return -1;
-    unsigned long entry_number;
-    pte* curr_table = kernel_page_table;
-    unsigned long i;
-    for (i = 0; i < PAGE_TABLE_LEN; i++) {
-        if (!curr_table[i] == valid){
-            curr_table[i].valid = 1;
-            curr.kprot = PROT_READ | PROT_WRITE;
-            curr.uprot = PROT_NONE;
-            curr.pfn = find_free_page();
-            entry_number = i;
-            return entry_number;
-        } 
-    }
-    return -1;
-}
+// unsigned long buf_region1() {
+//     if (free_page_num <= 0) return -1;
+//     unsigned long entry_number;
+//     pte* curr_table = kernel_page_table;
+//     unsigned long i;
+//     for (i = 0; i < PAGE_TABLE_LEN; i++) {
+//         if (!curr_table[i].valid){
+//             curr_table[i].valid = 1;
+//             curr.kprot = PROT_READ | PROT_WRITE;
+//             curr.uprot = PROT_NONE;
+//             curr.pfn = find_free_page();
+//             entry_number = i;
+//             return entry_number;
+//         } 
+//     }
+//     return -1;
+// }
 
