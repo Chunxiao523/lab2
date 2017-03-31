@@ -581,11 +581,12 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     pte* pt2 = child->page_table;
 
     // try to find a buffer in the region 0, if no available, find it in region 1
-    unsigned long entry_num = buf_region0();
+   // unsigned long entry_num = buf_region0();
+    unsigned long entry_num = 0;
     void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_0_BASE);
     TracePrintf("forkSwitch: find a entry %d in region0 %d", entry_num, vaddr_entry);
     if (entry_num == -1) {
-        entry_num = buf_region1();
+    //    entry_num = buf_region1();
         vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
         TracePrintf("forkSwitch: find a entry %d in region1 %d", entry_num, vaddr_entry);
     }
@@ -689,8 +690,8 @@ int MyBrk(void *addr) {
     unsigned long brk_pgn = UP_TO_PAGE(cur_Proc->brk) >> PAGESHIFT;
     unsigned long i;
 
-    if (addr_pgn >= user_stack_bott()-1)
-        return ERROR;
+//    if (addr_pgn >= user_stack_bott()-1)
+//        return ERROR;
 
     // allocate
     if (addr_pgn >= brk_pgn) {
