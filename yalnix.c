@@ -673,6 +673,7 @@ int MyDelay(int clock_ticks) {
     if(clock_ticks<0)
         return ERROR;
     cur_Proc->clock_ticks=clock_ticks;
+    TracePrintf(2, "Kernel call: delay clock value is \n", cur_Proc->clock_ticks);
     if(clock_ticks>0){
         add_delayQ(cur_Proc);
         ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,readyQ);
