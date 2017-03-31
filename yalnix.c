@@ -588,19 +588,19 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     // try to find a buffer in the region 1, if no available, find it in region 1
 
     for (i = 0; i < PAGE_TABLE_LEN; i++) {
-        if (!kernel_page_table[i].valid){
-            kernel_page_table[i].valid = 1;
-            kernel_page_table[i].kprot = PROT_READ | PROT_WRITE;
-            kernel_page_table[i].uprot = PROT_NONE;
-            kernel_page_table[i].pfn = find_free_page();
-            WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) ((void*) (long) ((i * PAGESIZE) + VMEM_1_BASE)));
+        if (kernel_page_table[i].valid==0){
+//            kernel_page_table[i].valid = 1;
+//            kernel_page_table[i].kprot = PROT_READ | PROT_WRITE;
+//            kernel_page_table[i].uprot = PROT_NONE;
+//         //   kernel_page_table[i].pfn = find_free_page();
+           // WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) ((void*) (long) ((i * PAGESIZE) + VMEM_1_BASE)));
             break;
         }
     }
     entry_number = i;
     void *vaddr_entry = (void*) (long) ((entry_number * PAGESIZE) + VMEM_1_BASE);
-
 //
+    TracePrintf(2, "Entry number is %d\n", entry_number);
 //    // copy the page use the buffer
 //    for (i = 0; i < PAGE_TABLE_LEN; i++) {
 //        if (i>=PAGE_TABLE_LEN-KERNEL_STACK_PAGES) pt2[i].uprot=PROT_NONE;
@@ -617,19 +617,21 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
 //    }
     TracePrintf(2, "begin to copy\n");
     for (i = 0; i < PAGE_TABLE_LEN; i ++) {
+
         unsigned long p2_pfn = find_free_page();
-        pt1[entry_number].valid = 1;
-        pt1[entry_number].uprot = PROT_READ | PROT_EXEC;
-        pt1[entry_number].kprot = PROT_READ | PROT_WRITE;
-        pt1[entry_number].pfn = p2_pfn;
+        TracePrintf(2, "Working on %d\n", i);
+        kernel_page_table[entry_number].valid = 1;
+        kernel_page_table[entry_number].uprot = PROT_NONE;
+        kernel_page_table[entry_number].kprot = PROT_READ | PROT_WRITE;
+        kernel_page_table[entry_number].pfn = p2_pfn;
 
         WriteRegister(REG_TLB_FLUSH, (RCS421RegVal)vaddr_entry);
         unsigned long addr = i * PAGESIZE + VMEM_0_BASE;
         memcpy(vaddr_entry, (void *)addr, PAGESIZE);
-
+        TracePrintf(2, "memcopy on %d\n", i);
         pt1[entry_number].valid = 0; //delete the pointer from the buffer page to the physical address
         WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
-
+        TracePrintf(2, "flush %d\n", i);
         // give the pfn from the temp memory to process 2's page table.
         pt2[i].pfn = p2_pfn;
         pt2[i].valid = 1;
@@ -1204,6 +1206,7 @@ void allocPageTable(pcb* p) {
         kernel_page_table[entry_num].valid = 1;
         kernel_page_table[entry_num].kprot = PROT_READ|PROT_WRITE;
         kernel_page_table[entry_num].uprot = PROT_NONE;
+        WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_1);
         pa_next_table = entry_num * PAGESIZE + VMEM_1_BASE;
         p->page_table = (pte*) pa_next_table;
         half = 1;
