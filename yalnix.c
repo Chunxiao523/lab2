@@ -615,7 +615,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
 //            pt1[entry_num].pfn = find_free_page();
 //        }
 //    }
-
+    TracePrintf(2, "begin to copy\n");
     for (i = 0; i < PAGE_TABLE_LEN; i ++) {
         unsigned long p2_pfn = find_free_page();
         pt1[entry_number].valid = 1;
@@ -636,7 +636,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
         pt2[i].kprot = PROT_READ|PROT_WRITE;
         pt2[i].uprot = PROT_NONE;
     }
-
+    TracePrintf(2, "copy!\n");
     free_used_page(kernel_page_table[entry_number]);
     WriteRegister(REG_PTR0, (RCS421RegVal)pt2);
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
