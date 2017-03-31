@@ -51,7 +51,6 @@ typedef struct pcb {
     struct pcb *childQ;
     struct pcb *childnext;
     struct Child *statusQ;
-
     unsigned long brk;
 } pcb;
 
@@ -146,6 +145,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
     readyQ = (pcb *)malloc(sizeof(pcb));
     delayQ = (pcb *)malloc(sizeof(pcb));
+
     readyQ = NULL;
     delayQ = NULL;
     // readyQ->readynext = NULL;
@@ -646,6 +646,33 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     return child->ctx;
 }
 
+SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
+    unsigned long i;
+    struct pte *pt1 = ((pcb*)p1)->page_table;
+    // free all the physical mem frame of p1
+    for (i = 0; i < PAGE_TABLE_LEN; i++) {
+        if (pt1[i].valid) {
+            free_used_page(pt1[i]);
+        }
+    }
+    // free its pcb content
+    free(p1->ctx);
+    // free its status queue
+    //
+    // switch to the next process in the readyQ
+    if(readyQ == NULL) {
+        WriteRegister(REG_PTR0, (RCS421RegVal)idle->page_table); // Set the register for region 0
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+        cur_Proc = idle;
+    } else {
+        WriteRegister(REG_PTR0, (RCS421RegVal)((pcb *)p2)->page_table); // Set the register for region 0
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+        cur_Proc = ((pcb *)p2);
+    }
+    return cur_Proc->ctx;
+}
+
+
 // free all the resources used by this process
 // run the ready queue or idle process if ready is empty
 SavedContext *exitSwitch(SavedContext *ctxp, void *p1, void *p2) {
@@ -809,14 +836,10 @@ int MyExec(ExceptionInfo *info, char *filename, char **argvec) {
 //
 }
 
-/*
-Exit is the normal means of terminating a process. The current process is terminated, and the integer value of status is saved for later
-collection by the parent process if the parent calls to Wait. However, when a process exits or is terminated by the kernel, if that process
-has children, each of these children should continue to run normally, but it will no longer have a parent and is thus then referred to as an
-“orphan” process. When such an orphan process later exits, its exit status is not saved or reported to its parent process since it no longer
-has a parent process;
-unlike in Unix, an orphan process is not “inherited” by any other process.
-When a process exits or is terminated by the kernel, all resources used by the calling process are freed, except for the saved status inform
+/* and is thus then referred to as an
+
+When a process exits or is terminated by the kernel, all resources used by the calling process 
+are freed, except for the saved status inform
 tion (if the process is not an orphan). The Exit kernel call can never return.
 kernel call for terminalling a process
 return status to its parent
@@ -825,30 +848,38 @@ if a child is terminate, it report status to its wait parent
 if a parent is terminate, its child's parent become null
 when a process exit, its resourses should be freed
 */
- int MyExit(int status){
+void MyExit(int status){
+    // if it is init or idle
+    if(cur_Proc->pid==0||cur_Proc->pid==1)
+        Halt();
 
-//     // put child into parent child
-//     if (cur_Proc->parent != NULL) {
-//         add_statusQ(cur_Proc);
-//     }
-//     // if it is parent, child delete parent
-//     pcb *tmp = cur_Proc->childQ;
-//     while(tmp != NULL) {
-//         tmp->parent = NULL;
-//         tmp = tmp->childnext;
-//     }
+    // if it is parent, child delete parent
+    if (cur_Proc->child_num != 0) {
+        pcb *tmp = cur_Proc->childQ;
+        while(tmp != NULL) {
+            tmp->parent = NULL;
+            tmp = tmp->childnext;
+        }
+        TracePrintf(0, "myexit: exit process has children");
+    }
 
-//     if (cur_Proc->pid == 0)
-//         return -1;
-//     if (cur_Proc->pid == 1){
-//         Halt();
-//         return -1;
-//     }
-//     return 0;
+    // if p has a parent 
+    // report status to its parent
+    // delete itself from childQ of its parent, check if the parent should be assigned to the readyQ
+    if (cur_Proc->parent != NULL) {
+        TracePrintf(0, "myexit: exit process has parent");
+        add_statusQ(cur_Proc);
+        TracePrintf(0, "report status to its parent\n");
+        delete_child(cur_Proc);
+        TracePrintf(0, "myexit: delete_child");
+        if (cur_Proc->parent->child_num == 0) {
+            add_readyQ(p->parent);
+            TracePrintf(0, "myexit: parent it put to readyqueue");
+        }
+    }
 
-//     ContextSwitch(delayContextSwitch, cur_Proc->ctx,cur_Proc,get_readyQ());
-//     //  free the resources it used
-//     struct pcb *next_Proc;
+    ContextSwitch(exitContextSwitch, cur_Proc->ctx, cur_Proc, readyQ);
+
  }
 
 /*
@@ -937,20 +968,15 @@ int TtyWrite(int tty_id, void *buf, int len) {
 //}
 
 void add_readyQ(pcb *p) {
-    TracePrintf(2, "1\n");
     pcb *temp = readyQ;
-    TracePrintf(2, "2\n");
     if (temp == NULL) {
         readyQ = p;
         p->readynext = NULL;
-        TracePrintf(2, "3\n");
         return;
     }
     while(temp -> readynext != NULL) {
         temp = temp->readynext;
-        TracePrintf(2, "whilemake\n");
     }
-    TracePrintf(2, "4\n");
     temp->readynext = p;
     p->readynext = NULL;
     p->readypre = temp;
@@ -1019,28 +1045,58 @@ void add_delayQ(pcb *p) {
 
 // add p to its parent's childQ
 void add_childQ(pcb *p) {
+    if (p->parent->child_num == 0) {
+        p->parent->childQ = p;
+        p->parent->childQ->childnext = NULL;
+        p->parent->child_num++;
+        return;
+    }
     pcb *tmp = p->parent->childQ;
     while(tmp != NULL) {
         tmp = tmp->childnext;
     }
     tmp = p;
+    p->parent->child_num++;
 }
 
+void delete_child(pcb *p) {
+    if (p->parent->child_num == 0) {
+        return;
+    }
+    pcb *tmp = p->parent->childQ;
+    while(tmp->childnext != NULL) {
+        if (tmp->childnext->pid == p->pid) {
+            tmp->childnext = tmp->childnext->childnext;
+            p->parent->child_num--;
+            return;
+        }
+        tmp = tmp->childnext;
+    }
+}
 // get the first child of the given pcb p
 // Child get_childQ(pcb *p) {
 //     Child
 // }
 
 // add pcb p's pid and status to the statusQ of its parent
-// void add_statusQ(pcb *p) {
-//     ChildStatus *tmp = p->parent->statusQ;
-//     while(tmp != NULL) {
-//         tmp = tmp->next;
-//     }
-//     tmp = (ChildStatus*)malloc(sizeof(Child));
-//     tmp->pid = p->pid;
-//     tmp->status = p->status;
-// }
+void add_statusQ(pcb *p) {
+    if (p->parent->statusQ == NULL) {
+        p->parent->statusQ = (ChildStatus*)malloc(sizeof(ChildStatus));
+        p->parent->statusQ->pid = p->pid;
+        p->parent->statusQ->status = p->status;
+        p->parent->statusQ->next = NULL;
+    } else {
+        ChildStatus *tmp = p->parent->statusQ;
+        wihle(tmp->next != NULL) {
+            tmp = tmp->next;
+        }
+        tmp->next = (ChildStatus*)malloc(sizeof(Child));
+        tmp = tmp->next;
+        tmp->pid = p->pid;
+        tmp->status = p->status;
+        p->next = NULL;
+    } 
+}
 
 // ChildStatus *get_statusQ(pcb *p) {
 //     if (p->statusQ == NULL)
