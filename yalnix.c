@@ -620,7 +620,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     }
     TracePrintf(2, "copy!\n");
     free_used_page(kernel_page_table[entry_number]);
-    WriteRegister(REG_PTR0, (RCS421RegVal)pt2);
+    WriteRegister(REG_PTR0, (RCS421RegVal)va2pa((void *)pt2));
     TracePrintf(0, "pte for 508 is %d\n", pt2[508].valid);
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
     TracePrintf(0,"flush complete\n");
@@ -753,7 +753,7 @@ int MyBrk(void *addr) {
  * return val: process ID for parent process, 0 for child process
  * child process's address is a copy of parent process's address space, the copy should include
  * neccessary information from parent process's pcb such as ctx*/
-int MyFork(void){
+int MyFork(){
     TracePrintf(0, "fork is called\n");
     int child_pid;
     unsigned long i;
