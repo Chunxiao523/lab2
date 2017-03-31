@@ -601,20 +601,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     void *vaddr_entry = (void*) (long) ((entry_number * PAGESIZE) + VMEM_1_BASE);
 //
     TracePrintf(2, "Entry number is %d\n", entry_number);
-//    // copy the page use the buffer
-//    for (i = 0; i < PAGE_TABLE_LEN; i++) {
-//        if (i>=PAGE_TABLE_LEN-KERNEL_STACK_PAGES) pt2[i].uprot=PROT_NONE;
-//        else pt2[i].uprot=PROT_READ | PROT_WRITE;
-//        if (pt1[i].valid && i != entry_num) {
-//            memcpy(vaddr_entry, (void *)(long)((i * PAGESIZE) + VMEM_0_BASE), PAGESIZE);
-//            pt2[i].valid = 1;
-//            pt2[i].uprot = pt1[i].uprot;
-//            pt2[i].kprot = pt2[i].kprot;
-//            pt2[i].pfn = pt1[entry_num].pfn;
-//            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-//            pt1[entry_num].pfn = find_free_page();
-//        }
-//    }
+
     TracePrintf(2, "begin to copy\n");
     for (i = 0; i < PAGE_TABLE_LEN; i ++) {
 
