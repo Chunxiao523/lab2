@@ -1129,7 +1129,7 @@ void allocPageTable(pcb* p) {
     TracePrintf(0, "allocate is used\n");
     if (half == 0) {
         unsigned long entry_num = buf_region1();
-        kernel_page_table[entry_num].pfn = getFreePage();
+        kernel_page_table[entry_num].pfn = find_free_page();
         kernel_page_table[entry_num].valid = 1;
         kernel_page_table[entry_num].kprot = PROT_READ|PROT_WRITE;
         kernel_page_table[entry_num].uprot = PROT_NONE;
