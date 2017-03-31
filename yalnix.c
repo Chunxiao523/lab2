@@ -40,18 +40,20 @@ typedef struct pcb {
     SavedContext *ctx;
     int pid;
     pte * page_table;
-    int child_num;
     int clock_ticks;
-    struct pcb *parent;
+    unsigned long brk;
+
     struct pcb *readynext;
     struct pcb *delaynext;
     struct pcb *waitnext;
     struct pcb *delaypre;
     struct pcb *readypre;
+
+    struct pcb *parent;
     struct pcb *childQ;
     struct pcb *childnext;
     struct Child *statusQ;
-    unsigned long brk;
+    int child_num;
 } pcb;
 
 pcb *cur_Proc;
@@ -877,7 +879,7 @@ by the status_ptr argument. On any error, this call instead returns ERROR.
          return ERROR;
      // if child queue is empty, block the calling process, return until one child is exit or terminated
      if (cur_Proc->childQ == NULL) {
-         ContextSwitch(delayContextSwitch(), cur_Proc->ctx,cur_Proc,get_readyQ());
+        // ContextSwitch(delayContextSwitch(), cur_Proc->ctx,cur_Proc,get_readyQ());
          add_waitQ(tmp);
          return;
      }
