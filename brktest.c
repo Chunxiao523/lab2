@@ -9,7 +9,7 @@ int
 main()
 {
     void *currbreak;
-    char *newpro;
+    char *new;
 
     currbreak = sbrk(0);
 
@@ -20,19 +20,19 @@ main()
     currbreak = (void *)UP_TO_PAGE(currbreak);
 
     if (Brk(currbreak)) {
-	fprintf(stderr, "Brk %p returned error\n", currbreak);
-	Exit(1);
+        fprintf(stderr, "Brk %p returned error\n", currbreak);
+        Exit(1);
     }
 
     currbreak++;
     currbreak = (void *)UP_TO_PAGE(currbreak);
 
     if (Brk(currbreak)) {
-	fprintf(stderr, "Brk %p returned error\n", currbreak);
-	Exit(1);
+        fprintf(stderr, "Brk %p returned error\n", currbreak);
+        Exit(1);
     }
 
-    newpro = malloc(10000);
+    new = malloc(10000);
 
     Exit(0);
 }
