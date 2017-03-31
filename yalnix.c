@@ -641,11 +641,11 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
 
     cur_Proc = child;
     add_readyQ(parent);
-    child->ctx = ctxp;
-   // memcpy(child->ctx, parent->ctx, sizeof(SavedContext));
+   // child->ctx = ctxp;
+    memcpy(child->ctx, parent->ctx, sizeof(SavedContext));
     TracePrintf(0,"fork switch complete\n");
     TracePrintf(0,"ctx%d\n", child->ctx);
-    return ctxp;
+    return child->ctx;
 }
 
 // free all the resources used by this process
