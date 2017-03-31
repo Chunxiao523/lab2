@@ -594,7 +594,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     entry_num = buf_region1();
     void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
     TracePrintf(0, "vaddr_entry%d \n", vaddr_entry);
-    TracePrintf("forkSwitch: find a entry %d in region0 %d", entry_num, vaddr_entry);
+    TracePrintf(0,"forkSwitch: find a entry %d in region0 %d", entry_num, vaddr_entry);
 
     // if no available in region 1, return process1 itself
     if (entry_num == -1) {
