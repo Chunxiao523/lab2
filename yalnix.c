@@ -714,7 +714,7 @@ int MyBrk(void *addr) {
         for (i=brk_pgn;i>=addr_pgn;i--) {
             if (cur_Proc->page_table[i].valid == 1) {
                 cur_Proc->page_table[i].valid = 0;
-                free_used_page(page_table[i]);
+                free_used_page(cur_Proc->page_table[i]);
             }
         }
     }
