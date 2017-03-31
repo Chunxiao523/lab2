@@ -1052,17 +1052,16 @@ unsigned long find_free_page() {
 
 /*
 *   free the physical frame
-*   para: the virual address of the frame
+*   para: the page entry contains frame to be freedmake
+
 */
-int free_used_page(pte *free_page) {
-    if (free_page == NULL)
-        return ERROR;
-    pte *newpage = (pte*)malloc(sizeof(free_page));
+int free_used_page(pte page_entry) {
+    free_page *newpage = (free_page*)malloc(sizeof(free_page));
     TracePrintf(0,"newpage complag");
-    newpage->phys_page_num = free_page->pfn;
+    newpage->phys_page_num = page_entry.pfn;
     newpage->next = head->next;
     head->next = newpage;
-    free_page.valid = 0;
+    page_entry.valid = 0;
     return 1;
 }
 
