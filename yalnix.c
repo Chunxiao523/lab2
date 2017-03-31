@@ -598,7 +598,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
         }
     }
     entry_number = i;
-    void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
+    void *vaddr_entry = (void*) (long) ((entry_number * PAGESIZE) + VMEM_1_BASE);
 
 //
 //    // copy the page use the buffer
