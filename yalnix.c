@@ -1066,7 +1066,7 @@ int free_used_page(pte page_entry) {
 void *va2pa(void *va) {
     if (DOWN_TO_PAGE(va) >= VMEM_1_BASE) {
 
-        unsigned long idx = (va-VMEM_1_BASE)>>PAGESHIFT;
+        unsigned long idx = ((long)va-VMEM_1_BASE)>>PAGESHIFT;
         return (kernel_page_table[idx].pfn<<PAGESHIFT|((long)va&PAGEOFFSET));
       //  TracePrintf(2, "Va to Pa: Virtual address in region 1\n");
       //  return (void *)((long)kernel_page_table[((long)DOWN_TO_PAGE(va) - VMEM_1_BASE) >> PAGESHIFT].pfn*PAGESIZE + ((long)va & PAGEOFFSET)) ;
