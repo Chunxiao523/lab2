@@ -772,6 +772,7 @@ int MyFork(void){
     child->clock_ticks = 0;
     child->parent = cur_Proc;
     child->brk = parent->brk;
+
     TracePrintf(0, "come to ContextSwitch");
     // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
     ContextSwitch(forkSwitch, parent->ctx, parent, child);
@@ -914,12 +915,12 @@ int half = 0; // 1 is not half
 void allocPageTable(pcb* p) {
     TracePrintf(0, "allocate is used\n");
     if (half == 1) {
-        p->page_table = pa_next_table;
+        p->page_table = (pte*) pa_next_table;
         TracePrintf(0, "use half%d\n", pa_next_table);
         half = 0;
     } else {
         pa_next_table = find_free_page()*PAGESIZE;
-        p->page_table = pa_next_table;
+        p->page_table = (pte*)pa_next_table;
         TracePrintf(0, "use new%d\n", pa_next_table);
         pa_next_table += PAGESIZE/2;
         half = 1;
