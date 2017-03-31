@@ -635,7 +635,9 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
 
     // change the process to child, add the parent to the ready queue
     WriteRegister(REG_PTR0, va2pa((unsigned long) pt2));
+    TracePrintf(0,"REG_PTR0 complete\n");
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
+    TracePrintf(0,"flush complete\n");
     cur_Proc = child;
     add_readyQ(parent);
 
@@ -1055,9 +1057,9 @@ unsigned long find_free_page() {
 *   para: the page entry contains frame to be freedmake
 
 */
-int free_used_page(pte page_entry) {
+int free_used_page(pte page_entry) {make
     free_page *newpage = (free_page*)malloc(sizeof(free_page));
-    TracePrintf(0,"newpage complag");
+    TracePrintf(0,"newpage complag\n");
     newpage->phys_page_num = page_entry.pfn;
     newpage->next = head->next;
     head->next = newpage;
