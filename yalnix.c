@@ -670,8 +670,8 @@ int MyDelay(int clock_ticks) {
         return ERROR;
     cur_Proc->clock_ticks=clock_ticks;
     if(clock_ticks>0){
-        ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,readyQ);
         add_delayQ(cur_Proc);
+        ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,readyQ);
     }
     return 0;
 }
