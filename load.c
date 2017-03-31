@@ -252,7 +252,7 @@ LoadProgram(char *name, char **args, ExceptionInfo *info, struct pte *process_pa
     }
 
     close(fd);			/* we've read it all now */
-
+    TracePrintf(0, "LoadProgram: close fd!\n");
     /*
      *  Now set the page table entries for the program text to be readable
      *  and executable, but not writable.
@@ -265,7 +265,7 @@ LoadProgram(char *name, char **args, ExceptionInfo *info, struct pte *process_pa
 
 
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-
+    TracePrintf(0, "LoadProgram: TLB flush 2nd!\n");
     /*
      *  Zero out the bss
      */
