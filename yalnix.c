@@ -594,11 +594,10 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
             kernel_page_table[i].uprot = PROT_NONE;
             kernel_page_table[i].pfn = find_free_page();
             WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) ((void*) (long) ((i * PAGESIZE) + VMEM_1_BASE)));
-            entry_number = i;
             break;
         }
     }
-
+    entry_number = i;
     void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
 
 //
