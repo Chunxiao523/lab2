@@ -627,10 +627,10 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
         WriteRegister(REG_TLB_FLUSH, (RCS421RegVal)vaddr_entry);
         unsigned long addr = i * PAGESIZE + VMEM_0_BASE;
         memcpy(vaddr_entry, (void *)addr, PAGESIZE);
-
+        TracePrintf(2, "memcopy on %d\n", i);
         pt1[entry_number].valid = 0; //delete the pointer from the buffer page to the physical address
         WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
-
+        TracePrintf(2, "flush %d\n", i);
         // give the pfn from the temp memory to process 2's page table.
         pt2[i].pfn = p2_pfn;
         pt2[i].valid = 1;
