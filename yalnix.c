@@ -579,22 +579,18 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     unsigned long i;
     // save the context to ctxp
     // return to the new context
-    struct pcb* parent;
-    struct pcb* child;
-    TracePrintf(0, "1\n");
-    parent = (struct pcb*) p1;
-    child = (struct pcb*)p2;
-    TracePrintf(0, "2\n");
-    pte* pt1 = parent->page_table;
-    pte* pt2 = child->page_table;
-    TracePrintf(0, "3\n");
-    
+    struct pcb* parent = (struct pcb*) p1;
+    struct pcb* child = (struct pcb*)p2;
+
+    struct pte* pt1 = parent->page_table;
+    struct pte* pt2 = child->page_table;
+
     // try to find a buffer in the region 1, if no available, find it in region 1
     unsigned long entry_num;
     entry_num = buf_region1();
     void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
-    TracePrintf(0, "vaddr_entry%d \n", vaddr_entry);
-    TracePrintf(0,"forkSwitch: find a entry %d in region0 %d", entry_num, vaddr_entry);
+   // TracePrintf(0, "vaddr_entry%d \n", vaddr_entry);
+//    TracePrintf(0,"forkSwitch: find a entry %d in region0 %d", entry_num, vaddr_entry);
 
     // if no available in region 1, return process1 itself
     if (entry_num == -1) {
@@ -615,20 +611,14 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
         }
     }
     // free the buffer and disable that entry in the page table
-    TracePrintf(0,"copy complete\n");
     free_used_page(kernel_page_table[entry_num]);
-    TracePrintf(0,"free_used_page\n");
     pt1[entry_num].valid = 0;
-
     // copy the saved context
-
-
-    TracePrintf(0,"SavedContext is copied\n");
-
+    WriteRegister(REG_PTR0, (RCS421RegVal)va2pa((unsigned long) pt2));
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
     TracePrintf(0,"flush complete\n");
     // change the process to child, add the parent to the ready queue
-    WriteRegister(REG_PTR0, (RCS421RegVal)va2pa((unsigned long) pt2));
+
     TracePrintf(0,"REG_PTR0 complete\n");
    // child->ctx = ctxp;
     memcpy(((pcb *)p2)->ctx, ctxp, sizeof(SavedContext));
