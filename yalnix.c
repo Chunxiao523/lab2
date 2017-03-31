@@ -617,10 +617,11 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
 //    }
     TracePrintf(2, "begin to copy\n");
     for (i = 0; i < PAGE_TABLE_LEN; i ++) {
-        TracePrintf(2, "Working on %d\n", i);
+
         unsigned long p2_pfn = find_free_page();
+        TracePrintf(2, "Working on %d\n", i);
         kernel_page_table[entry_number].valid = 1;
-        kernel_page_table[entry_number].uprot = PROT_READ | PROT_EXEC;
+        kernel_page_table[entry_number].uprot = PROT_NONE;
         kernel_page_table[entry_number].kprot = PROT_READ | PROT_WRITE;
         kernel_page_table[entry_number].pfn = p2_pfn;
 
