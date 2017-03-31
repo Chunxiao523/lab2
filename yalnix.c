@@ -727,7 +727,6 @@ int MyBrk(void *addr) {
  * child process's address is a copy of parent process's address space, the copy should include
  * neccessary information from parent process's pcb such as ctx*/
 int MyFork(void) {
-    TracePrintf(0, "fork is called\n");
     int child_pid;
     unsigned long i;
     pcb* parent;
@@ -742,7 +741,6 @@ int MyFork(void) {
             used_pgn_count++;
         }
     }
-    TracePrintf(0, "find out the used page count for the parent process %d\n", count);
 
     // check if there is enough physical mem for the child
     if (used_pgn_count > free_page_num) {
@@ -760,7 +758,6 @@ int MyFork(void) {
     child->clock_ticks = 0;
     child->parent = cur_Proc;
     child->brk = parent->brk;
-    TracePrintf(0, "come to ContestSwitch\n");
     // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
     ContextSwitch(forkSwitch, parent->ctx, parent, child);
     if (cur_Proc->pid == parent->pid) {
