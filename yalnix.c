@@ -932,16 +932,19 @@ int TtyWrite(int tty_id, void *buf, int len) {
 //}
 
 void add_readyQ(pcb *p) {
-    TracePrintf(2, "Add a new process to ready queue\n");
+    TracePrintf(2, "1\n");
     pcb *temp = readyQ;
+    TracePrintf(2, "2\n");
     if (temp == NULL) {
         readyQ = p;
         p->readynext = NULL;
+        TracePrintf(2, "3\n");
         return;
     }
     while(temp -> readynext != NULL) {
         temp = temp->readynext;
     }
+    TracePrintf(2, "4\n");
     temp->readynext = p;
     p->readynext = NULL;
     p->readypre = temp;
