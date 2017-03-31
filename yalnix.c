@@ -602,13 +602,10 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
                     WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
                     //TracePrintf(2, "Set the register %d\n", j);
                     unsigned long addr = i * PAGESIZE + VMEM_0_BASE;
-                    TracePrintf(2, "Finished setting the buffer %d  %d\n", addr, vaddr_entry);
                     memcpy(vaddr_entry, (void *)addr, PAGESIZE);
-                    TracePrintf(2, "memcopy on %d\n", i);
 
                     kernel_page_table[entry_number].valid = 0; //delete the pointer from the buffer page to the physical address
                     WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
-                    TracePrintf(2, "flush %d\n", i);
 
                     // give the pfn from the temp memory to process 2's page table.
                     pt2[i].pfn = p2_pfn;
@@ -624,6 +621,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     TracePrintf(2, "copy!\n");
     free_used_page(kernel_page_table[entry_number]);
     WriteRegister(REG_PTR0, (RCS421RegVal)pt2);
+    TracePrintf(0, "pte for 508 is %d\n", pt2[508].valid);
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
     TracePrintf(0,"flush complete\n");
     memcpy(((pcb *)p2)->ctx, ctxp, sizeof(SavedContext));
