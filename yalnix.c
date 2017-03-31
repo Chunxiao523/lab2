@@ -727,6 +727,7 @@ int MyBrk(void *addr) {
  * child process's address is a copy of parent process's address space, the copy should include
  * neccessary information from parent process's pcb such as ctx*/
 int MyFork(void) {
+    TracePrintf(0, "fork is called");
     int child_pid;
     unsigned long i;
     pcb* parent;
