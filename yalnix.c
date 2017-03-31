@@ -645,7 +645,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     memcpy(child->ctx, parent->ctx, sizeof(SavedContext));
     TracePrintf(0,"fork switch complete\n");
     TracePrintf(0,"ctx%d\n", child->ctx);
-    return child->ctx;
+    return &child->ctx;
 }
 
 // free all the resources used by this process
