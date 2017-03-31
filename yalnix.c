@@ -599,8 +599,9 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
                 void *vaddr_entry = (void*) (long) ((entry_number * PAGESIZE) + VMEM_1_BASE);
 
                 WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
-                TracePrintf(2, "Set the register %d\n", j);
+                //TracePrintf(2, "Set the register %d\n", j);
                 unsigned long addr = i * PAGESIZE + VMEM_0_BASE;
+                TracePrintf(2, "Finished setting the buffer %d  %d\n", addr, vaddr_entry);
                 memcpy(vaddr_entry, (void *)addr, PAGESIZE);
                 TracePrintf(2, "memcopy on %d\n", i);
 
