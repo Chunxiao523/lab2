@@ -618,12 +618,9 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
             }
         }
     }
-    TracePrintf(2, "copy!\n");
     free_used_page(kernel_page_table[entry_number]);
     WriteRegister(REG_PTR0, (RCS421RegVal)va2pa((void *)pt2));
-    TracePrintf(0, "pte for 508 is %d\n", pt2[508].valid);
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
-    TracePrintf(0,"flush complete\n");
     memcpy(((pcb *)p2)->ctx, ctxp, sizeof(SavedContext));
     cur_Proc = child;
     add_readyQ(parent);
@@ -658,6 +655,7 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
 // free all the resources used by this process
 // run the ready queue or idle process if ready is empty
 SavedContext *exitSwitch(SavedContext *ctxp, void *p1, void *p2) {
+    TracePrintf(0, "Kernel call: exit context switch is called\n");
     unsigned long i;
     pte *pt = cur_Proc->page_table;
 
@@ -790,12 +788,9 @@ int MyFork(){
     TracePrintf(0, "come to ContextSwitch\n");
     // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
     ContextSwitch(forkSwitch, parent->ctx, parent, child);
-    TracePrintf(0,"switch complete\n");
     if (cur_Proc->pid == parent->pid) {
-        TracePrintf(0,"return id \n");
         return child_pid;
     } else {
-        TracePrintf(0,"id\n");
         return 0;
     }
 }
@@ -817,8 +812,7 @@ int MyExec(ExceptionInfo *info, char *filename, char **argvec) {
 //
 }
 
-/* and is thus then referred to as an
-
+/*
 When a process exits or is terminated by the kernel, all resources used by the calling process 
 are freed, except for the saved status inform
 tion (if the process is not an orphan). The Exit kernel call can never return.
@@ -834,33 +828,33 @@ void MyExit(int status){
     if(cur_Proc->pid==0||cur_Proc->pid==1)
         Halt();
 
-    // if it is parent, child delete parent
+    /*
+     * if it is parent, child delete parent
+     */
     if (cur_Proc->child_num != 0) {
         pcb *tmp = cur_Proc->childQ;
         while(tmp != NULL) {
             tmp->parent = NULL;
             tmp = tmp->childnext;
         }
-        TracePrintf(0, "myexit: exit process has children");
+        TracePrintf(0, "MyExit: exit process has children\n");
     }
 
     // if p has a parent 
     // report status to its parent
     // delete itself from childQ of its parent, check if the parent should be assigned to the readyQ
     if (cur_Proc->parent != NULL) {
-        TracePrintf(0, "myexit: exit process has parent");
+        TracePrintf(0, "myexit: exit process has parent\n");
         add_statusQ(cur_Proc);
         TracePrintf(0, "report status to its parent\n");
         delete_child(cur_Proc);
         TracePrintf(0, "myexit: delete_child");
         if (cur_Proc->parent->child_num == 0) {
-          //  add_readyQ(p->parent);
+            add_readyQ(cur_Proc->parent);
             TracePrintf(0, "myexit: parent it put to readyqueue");
         }
     }
-
-    ContextSwitch(exitContextSwitch, cur_Proc->ctx, cur_Proc, readyQ);
-
+   // ContextSwitch(exitContextSwitch, cur_Proc->ctx, cur_Proc, readyQ);
  }
 
 /*
@@ -876,21 +870,21 @@ by the status_ptr argument. On any error, this call instead returns ERROR.
 */
  int MyWait(int *status_ptr) {
 
-//     int return_pid;
-//     pcb *tmp = cur_Proc;
-//     // if calling process have no child, return ERROR
-//     if (cur_Proc->child_num == 0)
-//         return ERROR;
-//     // if child queue is empty, block the calling process, return until one child is exit or terminated
-//     if (cur_Proc->childQ == NULL) {
-//         ContextSwitch(delayContextSwitch(), cur_Proc->ctx,cur_Proc,get_readyQ());
-//         add_waitQ(tmp);
-//         return
-//     }
-//     return_pid = tmp->childQ->pid;
-//     *status_ptr = tmp->childQ->status;
+     int return_pid;
+     pcb *tmp = cur_Proc;
+     // if calling process have no child, return ERROR
+     if (cur_Proc->child_num == 0)
+         return ERROR;
+     // if child queue is empty, block the calling process, return until one child is exit or terminated
+     if (cur_Proc->childQ == NULL) {
+         ContextSwitch(delayContextSwitch(), cur_Proc->ctx,cur_Proc,get_readyQ());
+         add_waitQ(tmp);
+         return;
+     }
+     return_pid = tmp->childQ->pid;
+     *status_ptr = tmp->childQ->status;
 
-//     return return_pid;
+     return return_pid;
  }
 
 /*Read the next line of input (or a portion of it) from terminal tty_id, copying the bytes of input into the buffer referenced by buf.
@@ -1044,22 +1038,22 @@ void delete_child(pcb *p) {
 
 // add pcb p's pid and status to the statusQ of its parent
 void add_statusQ(pcb *p) {
-//    if (p->parent->statusQ == NULL) {
-//        p->parent->statusQ = (ChildStatus*)malloc(sizeof(ChildStatus));
-//        p->parent->statusQ->pid = p->pid;
-//        p->parent->statusQ->status = p->status;
-//        p->parent->statusQ->next = NULL;
-//    } else {
-//        ChildStatus *tmp = p->parent->statusQ;
-//        wihle(tmp->next != NULL) {
-//            tmp = tmp->next;
-//        }
-//        tmp->next = (ChildStatus*)malloc(sizeof(Child));
-//        tmp = tmp->next;
-//        tmp->pid = p->pid;
-//        tmp->status = p->status;
-//        p->next = NULL;
-//    }
+    if (p->parent->statusQ == NULL) {
+        p->parent->statusQ = (ChildStatus*)malloc(sizeof(ChildStatus));
+        p->parent->statusQ->pid = p->pid;
+        p->parent->statusQ->status = p->status;
+        p->parent->statusQ->next = NULL;
+    } else {
+        ChildStatus *tmp = p->parent->statusQ;
+        while(tmp->next != NULL) {
+            tmp = tmp->next;
+        }
+        tmp->next = (ChildStatus*)malloc(sizeof(Child));
+        tmp = tmp->next;
+        tmp->pid = p->pid;
+        tmp->status = p->status;
+        p->next = NULL;
+    }
 }
 
 // ChildStatus *get_statusQ(pcb *p) {
