@@ -48,9 +48,9 @@ typedef struct pcb {
     struct pcb *waitnext;
     struct pcb *delaypre;
     struct pcb *readypre;
-    struct pcb *childQ;
     struct pcb *childnext;
-    struct Child *statusQ;
+    struct ChildStatus *statusQ;
+    struct ChildNode *childQ;
     unsigned long brk;
 } pcb;
 
@@ -79,6 +79,15 @@ typedef struct ChildStatus{
     int status;
     struct ChildStatus *next;
 } ChildStatus;
+
+/*
+ * child of a process which store its pid and status
+ */
+typedef struct ChildNode{
+    struct pcb *node;
+    struct ChildNode *next;
+} ChildNode;
+
 
 /*
  * The table used to store the interrupts
@@ -125,6 +134,9 @@ int MyGetPid();
 void *va2pa(void *va);
 unsigned long user_stack_bott();
 unsigned long buf_region1();
+void MyExit(int status);
+void delete_child(pcb *p);
+void add_statusQ(int status);
 /**
  * The procedure named KernelStart is automatically called by the bootstrap firmware in the computer
  * initialize your operating system kernel and then return.
@@ -659,7 +671,7 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
         }
     }
     // free its pcb content
-    free(p1->ctx);
+    // free(p1->ctx);
     // free its status queue
     //
     // switch to the next process in the readyQ
@@ -675,24 +687,6 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
     return cur_Proc->ctx;
 }
 
-
-// free all the resources used by this process
-// run the ready queue or idle process if ready is empty
-SavedContext *exitSwitch(SavedContext *ctxp, void *p1, void *p2) {
-    unsigned long i;
-    pte *pt = cur_Proc->page_table;
-
-    // free the used page
-    for (i = 0; i < PAGE_TABLE_LEN; i++) {
-        if (pt[i].valid) {
-            free_used_page((long) (i * PAGESIZE + VMEM_0_BASE));
-        }
-    }
-
-
-    // free the page table
-
-}
 //
 // SavedContext *waitSwitch(SavedContext *ctxp, void *p1, void *p2) {
 //     unsigned long i;
@@ -857,11 +851,11 @@ void MyExit(int status){
         Halt();
 
     // if it is parent, child delete parent
-    if (cur_Proc->child_num != 0) {
-        pcb *tmp = cur_Proc->childQ;
+    if (cur_Proc->childQ != NULL) {
+        ChildNode *tmp = cur_Proc->childQ;
         while(tmp != NULL) {
-            tmp->parent = NULL;
-            tmp = tmp->childnext;
+            tmp->node->parent = NULL;
+            tmp = tmp->next;
         }
         TracePrintf(0, "myexit: exit process has children");
     }
@@ -875,8 +869,8 @@ void MyExit(int status){
         TracePrintf(0, "report status to its parent\n");
         delete_child(cur_Proc);
         TracePrintf(0, "myexit: delete_child");
-        if (cur_Proc->parent->child_num == 0) {
-            add_readyQ(p->parent);
+        if (cur_Proc->parent->childQ == NULL) {
+            add_readyQ(cur_Proc->parent);
             TracePrintf(0, "myexit: parent it put to readyqueue");
         }
     }
@@ -1029,35 +1023,37 @@ void add_delayQ(pcb *p) {
 //     return tmp;
 // }
 
-// add p to its parent's childQ
 void add_childQ(pcb *p) {
-    if (p->parent->child_num == 0) {
-        p->parent->childQ = p;
-        p->parent->childQ->childnext = NULL;
-        p->parent->child_num++;
-        return;
+    ChildNode *tmp;
+    tmp = cur_Proc->parent->childQ;
+    if (tmp == NULL) {
+        tmp = (ChildNode*) malloc(sizeof(ChildNode));
+        cur_Proc->parent->childQ = tmp;
+        tmp->node = p;
+        tmp->next = NULL;
+    } else {
+        while(tmp->next!=NULL)
+            tmp = tmp->next;
+        tmp->next = (ChildNode*) malloc(sizeof(ChildNode));
+        tmp = tmp->next;
+        tmp->node = p;
+        tmp->next = NULL;
     }
-    pcb *tmp = p->parent->childQ;
-    while(tmp != NULL) {
-        tmp = tmp->childnext;
-    }
-    tmp = p;
-    p->parent->child_num++;
 }
 
 void delete_child(pcb *p) {
-    if (p->parent->child_num == 0) {
-        return;
-    }
-    pcb *tmp = p->parent->childQ;
-    while(tmp->childnext != NULL) {
-        if (tmp->childnext->pid == p->pid) {
-            tmp->childnext = tmp->childnext->childnext;
-            p->parent->child_num--;
-            return;
-        }
-        tmp = tmp->childnext;
-    }
+    // if (p->parent->child_num == 0) {
+    //     return;
+    // }
+    // pcb *tmp = p->parent->childQ;
+    // while(tmp->childnext != NULL) {
+    //     if (tmp->childnext->pid == p->pid) {
+    //         tmp->childnext = tmp->childnext->childnext;
+    //         p->parent->child_num--;
+    //         return;
+    //     }
+    //     tmp = tmp->childnext;
+    // }
 }
 // get the first child of the given pcb p
 // Child get_childQ(pcb *p) {
@@ -1065,23 +1061,24 @@ void delete_child(pcb *p) {
 // }
 
 // add pcb p's pid and status to the statusQ of its parent
-void add_statusQ(pcb *p) {
-    if (p->parent->statusQ == NULL) {
-        p->parent->statusQ = (ChildStatus*)malloc(sizeof(ChildStatus));
-        p->parent->statusQ->pid = p->pid;
-        p->parent->statusQ->status = p->status;
-        p->parent->statusQ->next = NULL;
+void add_statusQ(int status) {
+    ChildStatus *tmp;
+    tmp = cur_Proc->parent->statusQ;
+    if (tmp == NULL) {
+        tmp = (ChildStatus*) malloc(sizeof(ChildStatus));
+        cur_Proc->parent->statusQ = tmp;
+        tmp->pid = cur_Proc->pid;
+        tmp->status = status;
+        tmp->next = NULL;
     } else {
-        ChildStatus *tmp = p->parent->statusQ;
-        wihle(tmp->next != NULL) {
+        while(tmp->next!=NULL)
             tmp = tmp->next;
-        }
-        tmp->next = (ChildStatus*)malloc(sizeof(Child));
+        tmp->next = (ChildStatus*) malloc(sizeof(ChildStatus));
         tmp = tmp->next;
-        tmp->pid = p->pid;
-        tmp->status = p->status;
-        p->next = NULL;
-    } 
+        tmp->pid = cur_Proc->pid;
+        tmp->status = status;
+        tmp->next = NULL;
+    }
 }
 
 // ChildStatus *get_statusQ(pcb *p) {
