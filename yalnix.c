@@ -581,40 +581,87 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     // return to the new context
     struct pcb* parent = (struct pcb*) p1;
     struct pcb* child = (struct pcb*)p2;
-
     struct pte* pt1 = parent->page_table;
     struct pte* pt2 = child->page_table;
 
     // try to find a buffer in the region 1, if no available, find it in region 1
     unsigned long entry_num;
-    entry_num = buf_region1();
-    void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
-   // TracePrintf(0, "vaddr_entry%d \n", vaddr_entry);
-//    TracePrintf(0,"forkSwitch: find a entry %d in region0 %d", entry_num, vaddr_entry);
-
-    // if no available in region 1, return process1 itself
-    if (entry_num == -1) {
-        TracePrintf(0, "cannot find a buffer\n");
-        return parent->ctx;
-    }
-
-    // copy the page use the buffer
     for (i = 0; i < PAGE_TABLE_LEN; i++) {
-        if (pt1[i].valid && i != entry_num) {
-            memcpy(vaddr_entry, (void *)(long)((i * PAGESIZE) + VMEM_0_BASE), PAGESIZE);
-            pt2[i].valid = 1;
-            pt2[i].uprot = pt1[i].uprot;
-            pt2[i].kprot = pt2[i].kprot;
-            pt2[i].pfn = pt1[entry_num].pfn;
-            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-            pt1[entry_num].pfn = find_free_page();
+        if (!kernel_page_table[i].valid){
+            kernel_page_table[i].valid = 1;
+            kernel_page_table[i].kprot = PROT_READ | PROT_WRITE;
+            kernel_page_table[i].uprot = PROT_NONE;
+            kernel_page_table[i].pfn = find_free_page();
+            WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) ((void*) (long) ((i * PAGESIZE) + VMEM_1_BASE)));
+            entry_number = i;
+            break;
         }
     }
+
+    void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
+
+//
+//    // copy the page use the buffer
+//    for (i = 0; i < PAGE_TABLE_LEN; i++) {
+//        if (i>=PAGE_TABLE_LEN-KERNEL_STACK_PAGES) pt2[i].uprot=PROT_NONE;
+//        else pt2[i].uprot=PROT_READ | PROT_WRITE;
+//        if (pt1[i].valid && i != entry_num) {
+//            memcpy(vaddr_entry, (void *)(long)((i * PAGESIZE) + VMEM_0_BASE), PAGESIZE);
+//            pt2[i].valid = 1;
+//            pt2[i].uprot = pt1[i].uprot;
+//            pt2[i].kprot = pt2[i].kprot;
+//            pt2[i].pfn = pt1[entry_num].pfn;
+//            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+//            pt1[entry_num].pfn = find_free_page();
+//        }
+//    }
+
+    for (i = 0; i < PAGE_TABLE_LEN; i ++) {
+        unsigned long p2_pfn = find_free_page();
+        pt1[entry_number].valid = 1;
+        pt1[entry_number].uprot = PROT_READ | PROT_EXEC;
+        pt1[entry_number].kprot = PROT_READ | PROT_WRITE;
+        pt1[entry_number].pfn = p2_pfn;
+
+        WriteRegister(REG_TLB_FLUSH, (RCS421RegVal)vaddr_entry);
+        unsigned long addr = i * PAGESIZE + VMEM_0_BASE;
+        memcpy(vaddr_entry, (void *)addr, PAGESIZE);
+
+        pt1[entry_number].valid = 0; //delete the pointer from the buffer page to the physical address
+        WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
+
+        // give the pfn from the temp memory to process 2's page table.
+        p2_pt[i].pfn = p2_pfn;
+        p2_pt[i].valid = 1;
+        p2_pt[i].kprot = PROT_READ|PROT_WRITE;
+        p2_pt[i].uprot = PROT_NONE;
+    }
+
+//
+//
+//
+//    for(i=0;i<PAGE_TABLE_LEN;i++) {
+//        pt2[i].valid = 0;
+//        if(currentProc->pt_r0[i].valid){
+//            pt2[i].valid = 1;
+//            if (i>=PAGE_TABLE_LEN-KERNEL_STACK_PAGES) pt2[i].uprot=PROT_NONE;
+//            else pt2[i].uprot=PROT_READ | PROT_WRITE;
+//            pt2[i].kprot= PROT_READ | PROT_WRITE;
+//            pt2[i].pfn = getFreePage();
+//            currentProc->pt_r0[addi_pte_vpn].valid = 1;//XXX
+//            currentProc->pt_r0[addi_pte_vpn].uprot = PROT_NONE;//XXX
+//            currentProc->pt_r0[addi_pte_vpn].kprot = PROT_READ | PROT_WRITE;//XXX
+//            currentProc->pt_r0[addi_pte_vpn].pfn = pt2[i].pfn;//XXX
+//            memcpy((void*)(addi_pte_vpn<<PAGESHIFT),(void *)(i<<PAGESHIFT),PAGESIZE);//XXX
+//            currentProc->pt_r0[addi_pte_vpn].valid = 0;
+//            WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
+//        }
+//    }
     // free the buffer and disable that entry in the page table
     free_used_page(kernel_page_table[entry_num]);
-    pt1[entry_num].valid = 0;
+   // pt1[entry_num].valid = 0;
     // copy the saved context
-    WriteRegister(REG_PTR0, (RCS421RegVal)va2pa((unsigned long) pt2));
+    WriteRegister(REG_PTR0, (RCS421RegVal)pt2);
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
     TracePrintf(0,"flush complete\n");
     // change the process to child, add the parent to the ready queue
