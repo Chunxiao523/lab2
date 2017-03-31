@@ -1069,7 +1069,7 @@ void *va2pa(void *va) {
         return (void *)((long)kernel_page_table[((long)DOWN_TO_PAGE(va) - VMEM_1_BASE) >> PAGESHIFT].pfn*PAGESIZE + ((long)va & PAGEOFFSET)) ;
     } else {
         TracePrintf(2, "Va to Pa: Virtual address in region 0\n");
-        return (void *)((long)cur_Proc->page_table[((long)DOWN_TO_PAGE(va) - VMEM_0_BASE) >> PAGESHIFT].pfn);
+        return (void *)((long)cur_Proc->page_table[((long)DOWN_TO_PAGE(va) - VMEM_0_BASE) >> PAGESHIFT].pfn*PAGESIZE + ((long)va & PAGEOFFSET));
     }
 }
 
