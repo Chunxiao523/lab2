@@ -633,11 +633,12 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     memcpy(child->ctx, ctxp, sizeof(SavedContext));
     TracePrintf(0,"SavedContext is copied\n");
 
+    WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
+    TracePrintf(0,"flush complete\n");
     // change the process to child, add the parent to the ready queue
     WriteRegister(REG_PTR0, va2pa((unsigned long) pt2));
     TracePrintf(0,"REG_PTR0 complete\n");
-    WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
-    TracePrintf(0,"flush complete\n");
+
     cur_Proc = child;
     add_readyQ(parent);
 
