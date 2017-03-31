@@ -125,6 +125,7 @@ SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2);
 int MyGetPid();
 void *va2pa(void *va);
 unsigned long user_stack_bott();
+unsigned long buf_region1();
 /**
  * The procedure named KernelStart is automatically called by the bootstrap firmware in the computer
  * initialize your operating system kernel and then return.
@@ -614,14 +615,14 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
         }
     }
     // free the buffer and disable that entry in the page table
-    TracePrintf("copy complete\n")
+    TracePrintf(0,"copy complete\n");
     free_used_page(kernel_page_table[entry_num]);
     pt1[entry_num].valid = 0;
 
     // copy the saved context
 
     memcpy(child->ctx, ctxp, sizeof(SavedContext));
-    TracePrintf("SavedContext is copied\n");
+    TracePrintf(0,"SavedContext is copied\n");
 
     // change the process to child, add the parent to the ready queue
     WriteRegister(REG_PTR0, va2pa((unsigned long) pt2));
@@ -1108,7 +1109,7 @@ void *va2pa(void *va) {
 // }
 
 unsigned long buf_region1() {
-    TracePrintf(0, "buf_region1 is called\n")
+    TracePrintf(0, "buf_region1 is called\n");
     if (free_page_num <= 0) return -1;
     unsigned long entry_number;
     pte* curr_table = kernel_page_table;
