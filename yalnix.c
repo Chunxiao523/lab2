@@ -611,7 +611,8 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
             pt2[i].uprot = pt1[i].uprot;
             pt2[i].kprot = pt2[i].kprot;
             pt2[i].pfn = pt1[entry_num].pfn;
-            WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
+            // WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
+            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
             TracePrintf(0, "flush complete");
             pt1[entry_num].pfn = find_free_page();
         }
