@@ -585,7 +585,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
         /*
          * Find the first invalid page in kernel page table, as a buffer to help copy
          */
-        if(pt1.valid == 1) {
+        if(pt1[i].valid == 1) {
         TracePrintf(2, "Working on %d\n", i);
             for (j = 0; j < PAGE_TABLE_LEN; j++) {
                 if (kernel_page_table[j].valid==0) {
