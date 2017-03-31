@@ -575,7 +575,7 @@ SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
 
 // copy page table, kernel stack and ctxp from p1 to p2
 SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
-    TracePrintf(0,"forkSwitch is called");
+    TracePrintf(0,"forkSwitch is called, ctx is %d \n", ctxp);
     unsigned long i;
     // save the context to ctxp
     // return to the new context
@@ -606,19 +606,19 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     for (i = 0; i < PAGE_TABLE_LEN; i++) {
         if (pt1[i].valid && i != entry_num) {
             memcpy(vaddr_entry, (void *)(long)((i * PAGESIZE) + VMEM_0_BASE), PAGESIZE);
-            TracePrintf(0, "ememcopy complete1");
-            TracePrintf(0, "ememcopy complete%d", pt2[i].valid);
+//            TracePrintf(0, "ememcopy complete1");
+//            TracePrintf(0, "ememcopy complete%d", pt2[i].valid);
 
             // pt2[i].valid = 1;
-            TracePrintf(0, "ememcopy complete2");
+     //       TracePrintf(0, "ememcopy complete2");
             pt2[i].uprot = pt1[i].uprot;
-            TracePrintf(0, "ememcopy complete3");
+   //         TracePrintf(0, "ememcopy complete3");
             pt2[i].kprot = pt2[i].kprot;
-            TracePrintf(0, "ememcopy complete4");
+   //         TracePrintf(0, "ememcopy complete4");
             pt2[i].pfn = pt1[entry_num].pfn;
             // WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
             WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-            TracePrintf(0, "flush complete");
+    //        TracePrintf(0, "flush complete");
             pt1[entry_num].pfn = find_free_page();
         }
     }
