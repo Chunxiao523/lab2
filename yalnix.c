@@ -642,6 +642,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     cur_Proc = child;
     add_readyQ(parent);
     TracePrintf(0,"fork switch complete\n");
+    TracePrintf(0,"ctx%d\n", child->ctx);
     return child->ctx;
 }
 
@@ -738,6 +739,7 @@ int MyBrk(void *addr) {
     cur_Proc->brk = (unsigned long)addr;
     return 0;
 }
+
 
 /* input args: nond
  * return val: process ID for parent process, 0 for child process
