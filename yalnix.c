@@ -91,7 +91,7 @@ free_page *head;
 free_page *newpage;
 
 int free_page_num;
-
+int entry_number;
 /*
 define the terminals, which holds the read queue, write queue, readbuffer, writebuffer for each terms
 */
@@ -273,7 +273,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         cur_Proc = idle;
         TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
 
-        ContextSwitch(MyKernelSwitchFunc, idle->ctx, (void *) cur_Proc, (void *) init);
+        ContextSwitch(MyKernelSwitchFunc, cur_Proc->ctx, (void *) cur_Proc, (void *) init);
 
         if(cur_Proc->pid==0) //current running process is idle
             LoadProgram("idle",cmd_args, info, process_page_table);
@@ -575,75 +575,76 @@ SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
 
 // copy page table, kernel stack and ctxp from p1 to p2
 SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
-    TracePrintf(0,"forkSwitch is called");
+    TracePrintf(0,"forkSwitch is called, ctx is %d \n", ctxp);
     unsigned long i;
+
     // save the context to ctxp
     // return to the new context
-    pcb* parent;
-    pcb* child;
-    TracePrintf(0, "1\n");
-    parent = (pcb*) p1;
-    child = (pcb*)p2;
-    TracePrintf(0, "2\n");
-    pte* pt1 = parent->page_table;
-    pte* pt2 = child->page_table;
-    TracePrintf(0, "3\n");
-    
+    struct pcb* parent = (struct pcb*) p1;
+    struct pcb* child = (struct pcb*)p2;
+    struct pte* pt1 = parent->page_table;
+    struct pte* pt2 = child->page_table;
+
     // try to find a buffer in the region 1, if no available, find it in region 1
-    unsigned long entry_num;
-    entry_num = buf_region1();
-    void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
-    TracePrintf(0, "vaddr_entry%d \n", vaddr_entry);
-    TracePrintf(0,"forkSwitch: find a entry %d in region0 %d", entry_num, vaddr_entry);
 
-    // if no available in region 1, return process1 itself
-    if (entry_num == -1) {
-        TracePrintf(0, "cannot find a buffer\n");
-        return parent->ctx;
-    }
-
-    // copy the page use the buffer
     for (i = 0; i < PAGE_TABLE_LEN; i++) {
-        if (pt1[i].valid && i != entry_num) {
-            memcpy(vaddr_entry, (void *)(long)((i * PAGESIZE) + VMEM_0_BASE), PAGESIZE);
-            TracePrintf(0, "ememcopy complete1");
-            TracePrintf(0, "ememcopy complete%d", pt2[i].valid);
-
-            // pt2[i].valid = 1;
-            TracePrintf(0, "ememcopy complete2");
-            pt2[i].uprot = pt1[i].uprot;
-            TracePrintf(0, "ememcopy complete3");
-            pt2[i].kprot = pt2[i].kprot;
-            TracePrintf(0, "ememcopy complete4");
-            pt2[i].pfn = pt1[entry_num].pfn;
-            // WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
-            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-            TracePrintf(0, "flush complete");
-            pt1[entry_num].pfn = find_free_page();
+        if (!kernel_page_table[i].valid){
+            kernel_page_table[i].valid = 1;
+            kernel_page_table[i].kprot = PROT_READ | PROT_WRITE;
+            kernel_page_table[i].uprot = PROT_NONE;
+            kernel_page_table[i].pfn = find_free_page();
+            WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) ((void*) (long) ((i * PAGESIZE) + VMEM_1_BASE)));
+            break;
         }
     }
-    // free the buffer and disable that entry in the page table
-    TracePrintf(0,"copy complete\n");
-    free_used_page(kernel_page_table[entry_num]);
-    TracePrintf(0,"free_used_page\n");
-    pt1[entry_num].valid = 0;
+    entry_number = i;
+    void *vaddr_entry = (void*) (long) ((entry_number * PAGESIZE) + VMEM_1_BASE);
 
-    // copy the saved context
+//
+//    // copy the page use the buffer
+//    for (i = 0; i < PAGE_TABLE_LEN; i++) {
+//        if (i>=PAGE_TABLE_LEN-KERNEL_STACK_PAGES) pt2[i].uprot=PROT_NONE;
+//        else pt2[i].uprot=PROT_READ | PROT_WRITE;
+//        if (pt1[i].valid && i != entry_num) {
+//            memcpy(vaddr_entry, (void *)(long)((i * PAGESIZE) + VMEM_0_BASE), PAGESIZE);
+//            pt2[i].valid = 1;
+//            pt2[i].uprot = pt1[i].uprot;
+//            pt2[i].kprot = pt2[i].kprot;
+//            pt2[i].pfn = pt1[entry_num].pfn;
+//            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+//            pt1[entry_num].pfn = find_free_page();
+//        }
+//    }
+    TracePrintf(2, "begin to copy\n");
+    for (i = 0; i < PAGE_TABLE_LEN; i ++) {
+        unsigned long p2_pfn = find_free_page();
+        pt1[entry_number].valid = 1;
+        pt1[entry_number].uprot = PROT_READ | PROT_EXEC;
+        pt1[entry_number].kprot = PROT_READ | PROT_WRITE;
+        pt1[entry_number].pfn = p2_pfn;
 
-    memcpy(child->ctx, ctxp, sizeof(SavedContext));
-    TracePrintf(0,"SavedContext is copied\n");
+        WriteRegister(REG_TLB_FLUSH, (RCS421RegVal)vaddr_entry);
+        unsigned long addr = i * PAGESIZE + VMEM_0_BASE;
+        memcpy(vaddr_entry, (void *)addr, PAGESIZE);
 
+        pt1[entry_number].valid = 0; //delete the pointer from the buffer page to the physical address
+        WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
+
+        // give the pfn from the temp memory to process 2's page table.
+        pt2[i].pfn = p2_pfn;
+        pt2[i].valid = 1;
+        pt2[i].kprot = PROT_READ|PROT_WRITE;
+        pt2[i].uprot = PROT_NONE;
+    }
+    TracePrintf(2, "copy!\n");
+    free_used_page(kernel_page_table[entry_number]);
+    WriteRegister(REG_PTR0, (RCS421RegVal)pt2);
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
     TracePrintf(0,"flush complete\n");
-    // change the process to child, add the parent to the ready queue
-    WriteRegister(REG_PTR0, va2pa((unsigned long) pt2));
-    TracePrintf(0,"REG_PTR0 complete\n");
-
+    memcpy(((pcb *)p2)->ctx, ctxp, sizeof(SavedContext));
     cur_Proc = child;
     add_readyQ(parent);
-    TracePrintf(0,"fork switch complete\n");
-    TracePrintf(0,"ctx%d\n", child->ctx);
-    return child->ctx;
+    return ((pcb *)p2)->ctx;
 }
 
 SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
@@ -773,7 +774,7 @@ int MyBrk(void *addr) {
  * child process's address is a copy of parent process's address space, the copy should include
  * neccessary information from parent process's pcb such as ctx*/
 int MyFork(void){
-    TracePrintf(0, "fork is called");
+    TracePrintf(0, "fork is called\n");
     int child_pid;
     unsigned long i;
     pcb* parent;
@@ -806,7 +807,7 @@ int MyFork(void){
     child->parent = cur_Proc;
     child->brk = parent->brk;
 
-    TracePrintf(0, "come to ContextSwitch");
+    TracePrintf(0, "come to ContextSwitch\n");
     // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
     ContextSwitch(forkSwitch, parent->ctx, parent, child);
     TracePrintf(0,"switch complete\n");
@@ -948,30 +949,13 @@ int TtyWrite(int tty_id, void *buf, int len) {
     TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
 
-//void enqueue(struct proc_queue *queue, pcb *p) {
-//    if (queue->head == NULL)
-//        queue->head = p;
-//    else
-//        queue->tail->next = p;
-//    queue->tail = p;
-//    p->next = NULL;
-//}
-//
-//pcb *dequeue(struct proc_queue *queue) {
-//    pcb *nextNode;
-//    if (queue->head == NULL)
-//        return NULL;
-//    nextNode = queue->head;
-//    queue->head = queue->head->next;
-//    nextNode->next = NULL;
-//    return nextNode;
-//}
-
 void add_readyQ(pcb *p) {
     pcb *temp = readyQ;
     if (temp == NULL) {
         readyQ = p;
         p->readynext = NULL;
+        p->readypre = NULL;
+        TracePrintf(2, "3\n");
         return;
     }
     while(temp -> readynext != NULL) {
@@ -1156,8 +1140,11 @@ int free_used_page(pte page_entry) {
  */
 void *va2pa(void *va) {
     if (DOWN_TO_PAGE(va) >= VMEM_1_BASE) {
-        TracePrintf(2, "Va to Pa: Virtual address in region 1\n");
-        return (void *)((long)kernel_page_table[((long)DOWN_TO_PAGE(va) - VMEM_1_BASE) >> PAGESHIFT].pfn*PAGESIZE + ((long)va & PAGEOFFSET)) ;
+
+        unsigned long idx = ((long)va-VMEM_1_BASE)>>PAGESHIFT;
+        return (kernel_page_table[idx].pfn<<PAGESHIFT|((long)va&PAGEOFFSET));
+      //  TracePrintf(2, "Va to Pa: Virtual address in region 1\n");
+      //  return (void *)((long)kernel_page_table[((long)DOWN_TO_PAGE(va) - VMEM_1_BASE) >> PAGESHIFT].pfn*PAGESIZE + ((long)va & PAGEOFFSET)) ;
     } else {
         TracePrintf(2, "Va to Pa: Virtual address in region 0\n");
         return (void *)((long)cur_Proc->page_table[((long)DOWN_TO_PAGE(va) - VMEM_0_BASE) >> PAGESHIFT].pfn);
