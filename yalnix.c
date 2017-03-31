@@ -271,7 +271,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         cur_Proc = idle;
         TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
 
-        ContextSwitch(MyKernelSwitchFunc, init->ctx, (void *) cur_Proc, (void *) idle);
+        ContextSwitch(MyKernelSwitchFunc, idle->ctx, (void *) cur_Proc, (void *) init);
 
         if(cur_Proc->pid==0) //current running process is idle
             LoadProgram("idle",cmd_args, info, process_page_table);
