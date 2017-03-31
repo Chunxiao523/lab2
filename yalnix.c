@@ -608,7 +608,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
             memcpy(vaddr_entry, (void *)(long)((i * PAGESIZE) + VMEM_0_BASE), PAGESIZE);
             TracePrintf(0, "ememcopy complete1");
             TracePrintf(0, "ememcopy complete%d", i);
-            pt2[i].valid = 1;
+            // pt2[i].valid = 1;
             TracePrintf(0, "ememcopy complete2");
             pt2[i].uprot = pt1[i].uprot;
             TracePrintf(0, "ememcopy complete3");
