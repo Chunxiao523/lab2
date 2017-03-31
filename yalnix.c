@@ -572,58 +572,49 @@ SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
     }
     return cur_Proc->ctx;
 }
-
 // copy page table, kernel stack and ctxp from p1 to p2
 SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     TracePrintf(0,"forkSwitch is called, ctx is %d \n", ctxp);
-    unsigned long i;
-
-    // save the context to ctxp
-    // return to the new context
+    unsigned long i, j;
     struct pcb* parent = (struct pcb*) p1;
     struct pcb* child = (struct pcb*)p2;
     struct pte* pt1 = parent->page_table;
     struct pte* pt2 = child->page_table;
 
-    // try to find a buffer in the region 1, if no available, find it in region 1
-
-    for (i = 0; i < PAGE_TABLE_LEN; i++) {
-        if (kernel_page_table[i].valid==0){
-//            kernel_page_table[i].valid = 1;
-//            kernel_page_table[i].kprot = PROT_READ | PROT_WRITE;
-//            kernel_page_table[i].uprot = PROT_NONE;
-//         //   kernel_page_table[i].pfn = find_free_page();
-           // WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) ((void*) (long) ((i * PAGESIZE) + VMEM_1_BASE)));
-            break;
-        }
-    }
-    entry_number = i;
-    void *vaddr_entry = (void*) (long) ((entry_number * PAGESIZE) + VMEM_1_BASE);
-//
-    TracePrintf(2, "Entry number is %d\n", entry_number);
-
-    TracePrintf(2, "begin to copy\n");
     for (i = 0; i < PAGE_TABLE_LEN; i ++) {
+        /*
+         * Find the first invalid page in kernel page table, as a buffer to help copy
+         */
+        for (j = 0; j < PAGE_TABLE_LEN; j++) {
+            if (kernel_page_table[i].valid==0) {
+                entry_number = j;
+                unsigned long p2_pfn = find_free_page();
+                TracePrintf(2, "Working on %d\n", i);
+                kernel_page_table[entry_number].valid = 1;
+                kernel_page_table[entry_number].uprot = PROT_NONE;
+                kernel_page_table[entry_number].kprot = PROT_READ | PROT_WRITE;
+                kernel_page_table[entry_number].pfn = p2_pfn;
 
-        unsigned long p2_pfn = find_free_page();
-        TracePrintf(2, "Working on %d\n", i);
-        kernel_page_table[entry_number].valid = 1;
-        kernel_page_table[entry_number].uprot = PROT_NONE;
-        kernel_page_table[entry_number].kprot = PROT_READ | PROT_WRITE;
-        kernel_page_table[entry_number].pfn = p2_pfn;
+                void *vaddr_entry = (void*) (long) ((entry_number * PAGESIZE) + VMEM_1_BASE);
 
-        WriteRegister(REG_TLB_FLUSH, (RCS421RegVal)vaddr_entry);
-        unsigned long addr = i * PAGESIZE + VMEM_0_BASE;
-        memcpy(vaddr_entry, (void *)addr, PAGESIZE);
-        TracePrintf(2, "memcopy on %d\n", i);
-        pt1[entry_number].valid = 0; //delete the pointer from the buffer page to the physical address
-        WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
-        TracePrintf(2, "flush %d\n", i);
-        // give the pfn from the temp memory to process 2's page table.
-        pt2[i].pfn = p2_pfn;
-        pt2[i].valid = 1;
-        pt2[i].kprot = PROT_READ|PROT_WRITE;
-        pt2[i].uprot = PROT_NONE;
+                WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
+
+                unsigned long addr = i * PAGESIZE + VMEM_0_BASE;
+                memcpy(vaddr_entry, (void *)addr, PAGESIZE);
+                TracePrintf(2, "memcopy on %d\n", i);
+
+                kernel_page_table[entry_number].valid = 0; //delete the pointer from the buffer page to the physical address
+                WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
+                TracePrintf(2, "flush %d\n", i);
+
+                // give the pfn from the temp memory to process 2's page table.
+                pt2[i].pfn = p2_pfn;
+                pt2[i].valid = 1;
+                pt2[i].kprot = PROT_READ | PROT_WRITE;
+                pt2[i].uprot = PROT_NONE;
+                break;
+            }
+        }
     }
     TracePrintf(2, "copy!\n");
     free_used_page(kernel_page_table[entry_number]);
@@ -661,8 +652,6 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
     }
     return cur_Proc->ctx;
 }
-
-
 // free all the resources used by this process
 // run the ready queue or idle process if ready is empty
 SavedContext *exitSwitch(SavedContext *ctxp, void *p1, void *p2) {
@@ -689,7 +678,6 @@ SavedContext *exitSwitch(SavedContext *ctxp, void *p1, void *p2) {
 //     pte* pt2 = ->page_table;
 
 // }
-
 /*************** Kernel Call ***************/
 /**
  * Get pid kernel call
