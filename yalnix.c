@@ -945,6 +945,7 @@ void add_readyQ(pcb *p) {
     temp->readynext = p;
     p->readynext = NULL;
     p->readypre = temp;
+    TracePrintf(2, "ready complete\n");
 }
 
 pcb *get_readyQ() {
