@@ -639,7 +639,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     WriteRegister(REG_PTR0, va2pa((unsigned long) pt2));
     TracePrintf(0,"REG_PTR0 complete\n");
    // child->ctx = ctxp;
-    memcpy(((pcb *)p2)->ctx, ctpx, sizeof(SavedContext));
+    memcpy(((pcb *)p2)->ctx, ctxp, sizeof(SavedContext));
     cur_Proc = child;
     add_readyQ(parent);
     TracePrintf(0,"fork switch complete\n");
