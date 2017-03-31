@@ -797,7 +797,7 @@ if a child is terminate, it report status to its wait parent
 if a parent is terminate, its child's parent become null
 when a process exit, its resourses should be freed
 */
-// int MyExit(int status){
+ int MyExit(int status){
 
 //     // put child into parent child
 //     if (cur_Proc->parent != NULL) {
@@ -821,7 +821,7 @@ when a process exit, its resourses should be freed
 //     ContextSwitch(delayContextSwitch, cur_Proc->ctx,cur_Proc,get_readyQ());
 //     //  free the resources it used
 //     struct pcb *next_Proc;
-// }
+ }
 
 /*
 
@@ -834,7 +834,7 @@ calls exits or is terminated by the kernel (if a process is terminated by the ke
 On success, the Wait call returns the process ID of the child process and that child’s exit status is copied to the integer pointed to
 by the status_ptr argument. On any error, this call instead returns ERROR.
 */
-// int MyWait(int *status_ptr) {
+ int MyWait(int *status_ptr) {
 
 //     int return_pid;
 //     pcb *tmp = cur_Proc;
@@ -851,7 +851,7 @@ by the status_ptr argument. On any error, this call instead returns ERROR.
 //     *status_ptr = tmp->childQ->status;
 
 //     return return_pid;
-// }
+ }
 
 /*Read the next line of input (or a portion of it) from terminal tty_id, copying the bytes of input into the buffer referenced by buf.
 The maximum length of the line to be returned is given by len. A value of 0 for len is not in itself an error, as this simply means to
