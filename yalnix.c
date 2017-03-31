@@ -1057,7 +1057,7 @@ unsigned long find_free_page() {
 *   para: the page entry contains frame to be freedmake
 
 */
-int free_used_page(pte page_entry) {make
+int free_used_page(pte page_entry) {
     free_page *newpage = (free_page*)malloc(sizeof(free_page));
     TracePrintf(0,"newpage complag\n");
     newpage->phys_page_num = page_entry.pfn;
