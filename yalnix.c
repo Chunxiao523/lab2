@@ -92,7 +92,7 @@ free_page *head;
 free_page *newpage;
 
 int free_page_num;
-int entry_num;
+int entry_number;
 /*
 define the terminals, which holds the read queue, write queue, readbuffer, writebuffer for each terms
 */
@@ -597,7 +597,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
             break;
         }
     }
-    entry_num = i;
+    entry_number = i;
     void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
 
 //
