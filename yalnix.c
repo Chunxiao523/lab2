@@ -588,7 +588,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     // try to find a buffer in the region 1, if no available, find it in region 1
 
     for (i = 0; i < PAGE_TABLE_LEN; i++) {
-        if (!kernel_page_table[i].valid){
+        if (kernel_page_table[i].valid==0){
 //            kernel_page_table[i].valid = 1;
 //            kernel_page_table[i].kprot = PROT_READ | PROT_WRITE;
 //            kernel_page_table[i].uprot = PROT_NONE;
@@ -1149,6 +1149,7 @@ void allocPageTable(pcb* p) {
         kernel_page_table[entry_num].valid = 1;
         kernel_page_table[entry_num].kprot = PROT_READ|PROT_WRITE;
         kernel_page_table[entry_num].uprot = PROT_NONE;
+        WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
         pa_next_table = entry_num * PAGESIZE + VMEM_1_BASE;
         p->page_table = (pte*) pa_next_table;
         half = 1;
