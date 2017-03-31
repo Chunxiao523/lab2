@@ -630,7 +630,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
 
     // copy the saved context
 
-    memcpy(child->ctx, ctxp, sizeof(SavedContext));
+
     TracePrintf(0,"SavedContext is copied\n");
 
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
@@ -641,6 +641,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
 
     cur_Proc = child;
     add_readyQ(parent);
+    memcpy(child->ctx, ctxp, sizeof(SavedContext));
     TracePrintf(0,"fork switch complete\n");
     TracePrintf(0,"ctx%d\n", child->ctx);
     return child->ctx;
@@ -916,25 +917,6 @@ int TtyWrite(int tty_id, void *buf, int len) {
     return 0;
     TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
-
-//void enqueue(struct proc_queue *queue, pcb *p) {
-//    if (queue->head == NULL)
-//        queue->head = p;
-//    else
-//        queue->tail->next = p;
-//    queue->tail = p;
-//    p->next = NULL;
-//}
-//
-//pcb *dequeue(struct proc_queue *queue) {
-//    pcb *nextNode;
-//    if (queue->head == NULL)
-//        return NULL;
-//    nextNode = queue->head;
-//    queue->head = queue->head->next;
-//    nextNode->next = NULL;
-//    return nextNode;
-//}
 
 void add_readyQ(pcb *p) {
     TracePrintf(2, "1\n");

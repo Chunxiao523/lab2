@@ -5,11 +5,11 @@ int
 main(int argc, char **argv)
 {
     if (Fork() == 0) {
-	TracePrintf(0, "CHILE\n");
+	    TracePrintf(0, "CHILE\n");
     }
     else {
-	TracePrintf(10, "PARENT\n");
-	Delay(8);
+        TracePrintf(10, "PARENT\n");
+        Delay(8);
     }
 
     Exit(0);
