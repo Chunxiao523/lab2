@@ -642,7 +642,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     cur_Proc = child;
     add_readyQ(parent);
     TracePrintf(0,"fork switch complete\n");
-    TracePrintf(0,"ctx%d\n", child->ctx);
+    TracePrintf(0,"ctx%x\n", child->ctx);
     return child->ctx;
 }
 
