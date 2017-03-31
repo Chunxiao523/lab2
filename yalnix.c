@@ -577,7 +577,7 @@ SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
 SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     TracePrintf(0,"forkSwitch is called, ctx is %d \n", ctxp);
     unsigned long i;
-    unsigned long entry_num;
+
     // save the context to ctxp
     // return to the new context
     struct pcb* parent = (struct pcb*) p1;
@@ -597,7 +597,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
             break;
         }
     }
-    entry_number = i;
+    int entry_num = i;
     void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
 
 //
