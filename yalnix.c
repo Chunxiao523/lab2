@@ -250,7 +250,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     vir_mem = 1;
     TracePrintf(2, "Kernel Start: virtual memory enabled.\n");
    //if(cmd_args[0] == NULL) {
-        /*
+    /*
 	 * Create idle and init process
 	 */
         idle = (pcb*)malloc(sizeof(pcb));
@@ -277,7 +277,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
             LoadProgram("idle",cmd_args, info, process_page_table);
         else if(cur_Proc->pid==1) {
             if (cmd_args==NULL || cmd_args[0]==NULL) LoadProgram("init",cmd_args,info, init_page_table);
-            else LoadProgram(cmd_args[0],cmd_args, info, process_page_table);
+            else LoadProgram(cmd_args[0], cmd_args, info, process_page_table);
         }
 }
 /**
