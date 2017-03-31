@@ -625,6 +625,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     // free the buffer and disable that entry in the page table
     TracePrintf(0,"copy complete\n");
     free_used_page(kernel_page_table[entry_num]);
+    TracePrintf(0,"free_used_page\n");
     pt1[entry_num].valid = 0;
 
     // copy the saved context
