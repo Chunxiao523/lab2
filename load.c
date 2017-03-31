@@ -229,14 +229,14 @@ LoadProgram(char *name, char **args, ExceptionInfo *info, struct pte *process_pa
        process_page_table[i].uprot = PROT_READ | PROT_WRITE;
       
     }
-    TracePrintf(0, "LoadProgram: finally the user stack pages \n");
+    TracePrintf(0, "LoadProgram: finalize the user stack pages \n");
     /*
      *  All pages for the new address space are now in place.  Flush
      *  the TLB to get rid of all the old PTEs from this process, so
      *  we'll be able to do the read() into the new pages below.
      */
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-
+    TracePrintf(0, "LoadProgram: TLB flush!\n");
     /*
      *  Read the text and data from the file into memory.
      */
