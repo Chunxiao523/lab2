@@ -908,25 +908,6 @@ int TtyWrite(int tty_id, void *buf, int len) {
     TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
 
-// used to allocate physical memory for page table after valid virtual memory
-unsigned long pa_next_table;
-int half = 0; // 1 is not half
-
-void allocPageTable(pcb* p) {
-    TracePrintf(0, "allocate is used\n");
-    if (half == 1) {
-        p->page_table = (pte*) pa_next_table;
-        TracePrintf(0, "use half%d\n", pa_next_table);
-        half = 0;
-    } else {
-        pa_next_table = find_free_page()*PAGESIZE;
-        p->page_table = (pte*)pa_next_table;
-        TracePrintf(0, "use new%d\n", pa_next_table);
-        pa_next_table += PAGESIZE/2;
-        half = 1;
-    }
-}
-
 //void enqueue(struct proc_queue *queue, pcb *p) {
 //    if (queue->head == NULL)
 //        queue->head = p;
@@ -1119,6 +1100,7 @@ void *va2pa(void *va) {
 //     return -1;
 // }
 
+// return entry number of kernel page table
 unsigned long buf_region1() {
     TracePrintf(0, "buf_region1 is called\n");
     if (free_page_num <= 0) return -1;
@@ -1137,4 +1119,27 @@ unsigned long buf_region1() {
         }
     }
     return -1;
+}
+
+// used to allocate physical memory for page table after valid virtual memory
+// init the page table's virtual address and half
+unsigned long pa_next_table;
+int half = 0; // 1 is not half
+void allocPageTable(pcb* p) {
+    TracePrintf(0, "allocate is used\n");
+    if (half == 0) {
+        unsigned long entry_num = buf_region1();
+        kernel_page_table[entry_num].pfn = getFreePage();
+        kernel_page_table[entry_num].valid = 1;
+        kernel_page_table[entry_num].kprot = PROT_READ|PROT_WRITE;
+        kernel_page_table[entry_num].uprot = PROT_NONE;
+        pa_next_table = entry_num * PAGESIZE + VMEM_1_BASE;
+        p->page_table = (pte*) pa_next_table;
+        half = 1;
+        pa_next_table += PAGESIZE / 2;
+    } 
+    else {
+        p->page_table = (pte*) pa_next_table;
+        half = 0;
+    }
 }
