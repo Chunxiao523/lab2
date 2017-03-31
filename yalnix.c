@@ -992,7 +992,7 @@ void add_childQ(pcb *p) {
     while(tmp != NULL) {
         tmp = tmp->childnext;
     }
-    *tmp = p;
+    tmp = p;
 }
 
 // get the first child of the given pcb p
