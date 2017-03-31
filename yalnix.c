@@ -574,6 +574,7 @@ SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
 
 // copy page table, kernel stack and ctxp from p1 to p2
 SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
+    TracePrintf(0,"forkSwitch is called");
     unsigned long i;
     // save the context to ctxp
     // return to the new context
@@ -759,6 +760,7 @@ int MyFork(void){
     child->clock_ticks = 0;
     child->parent = cur_Proc;
     child->brk = parent->brk;
+    TracePrintf(0, "come to ContextSwitch");
     // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
     ContextSwitch(forkSwitch, parent->ctx, parent, child);
     if (cur_Proc->pid == parent->pid) {
