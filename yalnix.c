@@ -5,9 +5,6 @@
  */
 void *kernel_cur_break;
 
-
-
-
 /*
  * flag to indicate if you have yet enabled virtual memory
  * 0: not, 1: yes
@@ -35,7 +32,7 @@ struct pte *process_page_table;
 /*
  * Page table for idle process
  */
-struct  pte *idle_page_table;
+struct  pte *init_page_table;
 /*
  * Data structure of process
  */
@@ -50,6 +47,7 @@ typedef struct pcb {
     struct pcb *delaynext;
     struct pcb *waitnext;
     struct pcb *delaypre;
+    struct pcb *readypre;
     struct pcb *childQ;
     struct pcb *childnext;
     struct Child *statusQ;
@@ -142,7 +140,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
     kernel_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
     process_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
-    idle_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
+    init_page_table = (struct pte*)malloc(PAGE_TABLE_SIZE);
 
     readyQ = (pcb *)malloc(sizeof(pcb));
     delayQ = (pcb *)malloc(sizeof(pcb));
@@ -229,7 +227,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     for (addr = VMEM_0_BASE; addr< KERNEL_STACK_BASE; addr += PAGESIZE) {
         i = (addr-VMEM_0_BASE)>>PAGESHIFT;
         process_page_table[i].valid = 0;
-        idle_page_table[i].valid = 0;
+        init_page_table[i].valid = 0;
     }
     for (addr = KERNEL_STACK_BASE; addr < VMEM_0_LIMIT; addr+= PAGESIZE) {
         i = (addr - VMEM_0_BASE)>>PAGESHIFT; //VMEM_0_BASE = 0
@@ -238,10 +236,10 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         process_page_table[i].kprot = PROT_READ|PROT_WRITE;
         process_page_table[i].uprot = PROT_NONE;
 
-        idle_page_table[i].pfn = addr>>PAGESHIFT;;
-        idle_page_table[i].valid = 0;
-        idle_page_table[i].kprot = PROT_NONE;
-        idle_page_table[i].uprot = PROT_NONE;
+        init_page_table[i].pfn = addr>>PAGESHIFT;;
+        init_page_table[i].valid = 0;
+        init_page_table[i].kprot = PROT_NONE;
+        init_page_table[i].uprot = PROT_NONE;
     }
 
     TracePrintf(2, "Kernel Start: region 0 page table initialized.\n");
@@ -251,43 +249,36 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     WriteRegister(REG_VM_ENABLE, 1);
     vir_mem = 1;
     TracePrintf(2, "Kernel Start: virtual memory enabled.\n");
-    if(cmd_args[0] == NULL) {
+   //if(cmd_args[0] == NULL) {
         /*
 	 * Create idle and init process
 	 */
         idle = (pcb*)malloc(sizeof(pcb));
         idle->pid = pid;
-        idle->page_table = idle_page_table;
+        idle->page_table = process_page_table;
         pid ++;
         idle->ctx=(SavedContext*)malloc(sizeof(SavedContext));
         TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
 
         init = (pcb *) malloc(sizeof(pcb));
         init->pid = pid;
-        init->page_table = process_page_table;
+        init->page_table = init_page_table;
         pid ++;
         init->ctx = (SavedContext *)malloc(sizeof(SavedContext));
-        cur_Proc = init;
 
-        LoadProgram("init",cmd_args,info, process_page_table);
-        TracePrintf(2, "Kernel Start: init process pcb initialized.\n");
 
-        ContextSwitch(MyKernelSwitchFunc, init->ctx, (void *) cur_Proc, (void *) idle);
-        TracePrintf(2, "Kernel Start: Context Switch finished.\n");
-        LoadProgram("idle",cmd_args,info, idle->page_table);
+        LoadProgram("idle",cmd_args,info, process_page_table);
         cur_Proc = idle;
         TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
-    } else {
-        cur_Proc= (pcb *)malloc(sizeof(pcb));
-        TracePrintf(2, "Kernel Start:Load process from argument.\n");
-        LoadProgram(cmd_args[0],cmd_args,info, process_page_table);
-        TracePrintf(2, "Kernel Start:Load process back.\n");
-        cur_Proc->page_table = process_page_table;
-        cur_Proc->pid = pid++;
-        cur_Proc->ctx = (SavedContext *)malloc(sizeof(SavedContext));
-        TracePrintf(2, "Kernel Start: Load process from argument finished.\n");
-    }
 
+        ContextSwitch(MyKernelSwitchFunc, init->ctx, (void *) cur_Proc, (void *) idle);
+
+        if(cur_Proc->pid==0) //current running process is idle
+            LoadProgram("idle",cmd_args, info, process_page_table);
+        else if(currentProc->pid==1) {
+            if (cmd_args==NULL || cmd_args[0]==NULL) LoadProgram("init",cmd_args,info, init_page_table);
+            else LoadProgram(cmd_args[0],cmd_args, info, process_page_table);
+        }
 }
 /**
  * SetKernelBrk
@@ -936,11 +927,17 @@ void allocPageTable(pcb* p) {
 
 void add_readyQ(pcb *p) {
     pcb *temp = readyQ;
-    while(temp != NULL) {
+    if (temp == NULL) {
+        readyQ = p;
+        p->readynext = NULL;
+        return;
+    }
+    while(temp -> readynext != NULL) {
         temp = temp->readynext;
     }
     temp->readynext = p;
     p->readynext = NULL;
+    p->readypre = temp;
 }
 
 pcb *get_readyQ() {
@@ -957,18 +954,18 @@ void add_delayQ(pcb *p) {
     // Add Current Process to the tail of delayQ
     pcb *temp = delayQ;
     if (temp == NULL) {
-        delayQ = cur_Proc;
-        cur_Proc->delaynext = NULL;
-        cur_Proc->delaypre = NULL;
+        delayQ = p;
+        p->delaynext = NULL;
+        p->delaypre = NULL;
         return;
     }
 
     while(temp->delaynext != NULL) {
         temp = temp->delaynext;
     }
-    cur_Proc->delaypre = temp;
-    cur_Proc->delaynext = temp->delaynext;
-    temp->delaynext = cur_Proc;
+    p->delaypre = temp;
+    p->delaynext = temp->delaynext;
+    temp->delaynext = p;
 }
 
 // void add_waitQ(pcb *p) {
