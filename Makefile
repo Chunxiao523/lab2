@@ -10,7 +10,7 @@
 #	Your project must be implemented using the C programming
 #	language (e.g., not in C++ or other languages).
 #
-   
+
 #
 #	Define the list of everything to be made by this Makefile.
 #	The list should include "yalnix" (the name of your kernel),
