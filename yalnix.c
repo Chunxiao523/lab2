@@ -646,7 +646,7 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
         }
     }
     // free its pcb content
-    free(p1->ctx);
+  //  free(p1->ctx);
     // free its status queue
     //
     // switch to the next process in the readyQ
