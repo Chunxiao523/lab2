@@ -579,11 +579,11 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     unsigned long i;
     // save the context to ctxp
     // return to the new context
-    pcb* parent;
-    pcb* child;
+    struct pcb* parent;
+    struct pcb* child;
     TracePrintf(0, "1\n");
-    parent = (pcb*) p1;
-    child = (pcb*)p2;
+    parent = (struct pcb*) p1;
+    child = (struct pcb*)p2;
     TracePrintf(0, "2\n");
     pte* pt1 = parent->page_table;
     pte* pt2 = child->page_table;
@@ -638,14 +638,13 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     // change the process to child, add the parent to the ready queue
     WriteRegister(REG_PTR0, va2pa((unsigned long) pt2));
     TracePrintf(0,"REG_PTR0 complete\n");
-
+   // child->ctx = ctxp;
+    memcpy(((pcb *)p2)->ctx, ctpx, sizeof(SavedContext));
     cur_Proc = child;
     add_readyQ(parent);
-   // child->ctx = ctxp;
-    memcpy(child->ctx, parent->ctx, sizeof(SavedContext));
     TracePrintf(0,"fork switch complete\n");
     TracePrintf(0,"ctx%d\n", &child->ctx);
-    return &child->ctx;
+    return ((pcb *)p2)->ctx;
 }
 
 // free all the resources used by this process
@@ -748,7 +747,7 @@ int MyBrk(void *addr) {
  * child process's address is a copy of parent process's address space, the copy should include
  * neccessary information from parent process's pcb such as ctx*/
 int MyFork(void){
-    TracePrintf(0, "fork is called");
+    TracePrintf(0, "fork is called\n");
     int child_pid;
     unsigned long i;
     pcb* parent;
@@ -781,7 +780,7 @@ int MyFork(void){
     child->parent = cur_Proc;
     child->brk = parent->brk;
 
-    TracePrintf(0, "come to ContextSwitch");
+    TracePrintf(0, "come to ContextSwitch\n");
     // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
     ContextSwitch(forkSwitch, parent->ctx, parent, child);
     TracePrintf(0,"switch complete\n");
