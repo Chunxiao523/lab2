@@ -1149,7 +1149,7 @@ void allocPageTable(pcb* p) {
         kernel_page_table[entry_num].valid = 1;
         kernel_page_table[entry_num].kprot = PROT_READ|PROT_WRITE;
         kernel_page_table[entry_num].uprot = PROT_NONE;
-        WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
+        WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_1);
         pa_next_table = entry_num * PAGESIZE + VMEM_1_BASE;
         p->page_table = (pte*) pa_next_table;
         half = 1;
