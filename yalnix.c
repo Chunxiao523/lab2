@@ -47,7 +47,9 @@ typedef struct pcb {
     struct pcb *delaynext;
     struct pcb *waitnext;
     struct pcb *delaypre;
-    struct Child *child;
+    struct pcb *childQ;
+    struct Child *statusQ;
+
     unsigned long brk;
 } pcb;
 
@@ -75,7 +77,7 @@ typedef struct child_node{
     int pid;
     int status;
     struct child_node *next;
-} Child;
+} ChildStatus;
 
 /*
  * The table used to store the interrupts
@@ -557,22 +559,17 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     unsigned long i;
     // save the context to ctxp
     // return to the new context
-    pcb* parent = (pcb*) p1;
-    pcb* child = (pcb*)p2;
+    (pcb*) parent = (pcb*) p1;
+    (pcb*) child = (pcb*)p2;
     pte* pt1 = parent->page_table;
     pte* pt2 = child->page_table;
-<<<<<<< HEAD
-=======
-   // unsigned long i;
->>>>>>> ef83460cba6438e79d759d98453caeaa663c4186
 
     // try to find a buffer in the region 0, if no available, find it in region 1
-  //  unsigned long entry_num = buf_region0();
-    unsigned long entry_num = 0;
+    unsigned long entry_num = buf_region0();
     void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_0_BASE);
     TracePrintf("forkSwitch: find a entry %d in region0 %d", entry_num, vaddr_entry);
     if (entry_num == -1) {
-       // entry_num = buf_region1();
+        entry_num = buf_region1();
         vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
         TracePrintf("forkSwitch: find a entry %d in region1 %d", entry_num, vaddr_entry);
     } 
@@ -589,9 +586,9 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
             pt2[i].valid = 1;
             pt2[i].uprot = pt1[i].uprot;
             pt2[i].kprot = pt2[i].kprot;
-         //   pt2[i].pgn = pt1[entry_num].pgn;
+            pt2[i].pgn = pt1[entry_num].pgn;
             WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
-         //   pt1[entry_num].pgn = find_free_page();
+            pt1[entry_num].pgn = find_free_page();
         }
     }
     // free the buffer and disable that entry in the page table
@@ -602,7 +599,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     memcpy(child->ctx, ctxp, sizeof(SavedContext));
 
     // change the process to child, add the parent to the ready queue
-    WriteRegister(REG_PTR0, va2pa((unsigned long) pt2));
+    WriteRegister(REG_PTR0, va2pa(unsigned long) pt2);
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
     cur_Proc = child;
     add_readyQ(parent);
@@ -610,15 +607,26 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     return child->ctx;
 }
 
-// 
-SavedContext *waitSwitch(SavedContext *ctxp, void *p1, void *p2) {
+// free all the resources used by this process
+// run the ready queue or idle process if ready is empty
+SavedContext *exitSwitch(SavedContext *ctxp, void *p1, void *p2) {
     unsigned long i;
-    // save the context to ctxp
-    // return to the new context
-    pte* pt1 = ->page_table;
-    pte* pt2 = ->page_table;
-
+    pte *pt = cur_Proc->page_table;
+    for (i = 0; i < PAGE_TABLE_LEN; i++) {
+        if (pt[i] == valid) {
+            free_page()
+        }
+    }
 }
+// 
+// SavedContext *waitSwitch(SavedContext *ctxp, void *p1, void *p2) {
+//     unsigned long i;
+//     // save the context to ctxp
+//     // return to the new context
+//     pte* pt1 = ->page_table;
+//     pte* pt2 = ->page_table;
+
+// }
 
 /*************** Kernel Call ***************/
 /**
@@ -635,13 +643,11 @@ int MyGetPid() {
  * Delay kernel call
  */
 int MyDelay(int clock_ticks) {
-    TracePrintf(0,"Kernel Call: Delay is called\n");
     int i;
     if(clock_ticks<0)
         return ERROR;
     cur_Proc->clock_ticks=clock_ticks;
-    if(clock_ticks>0 && readyQ != NULL){
-
+    if(clock_ticks>0){
         ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,readyQ);
         add_delayQ(cur_Proc);
     }
@@ -661,12 +667,12 @@ int MyBrk(void *addr) {
     unsigned long brk_pgn = UP_TO_PAGE(cur_Proc->brk) >> PAGESHIFT;
     unsigned long i;
 
-//    if (addr_pgn >= user_stack_bott()-1)
-//        return ERROR;
+    if (addr_pgn >= user_stack_bott()-1)
+        return ERROR;
 
     // allocate
     if (addr_pgn >= brk_pgn) {
-        if (addr_pgn - brk_pgn>free_page_num)
+        if (addr_pgn - brk_pgn>free_addr_pgn)
             return ERROR;
         
         for (i=MEM_INVALID_PAGES;i<addr_pgn;i++) {
@@ -728,7 +734,7 @@ int MyFork(void) {
     child->parent = cur_Proc;
     child->brk = parent->brk;
     // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
-    //ContextSwitch(forkSwitch(), parent->ctx, parent, child);
+    ContextSwitch(forkSwitch(), parent->ctx, parent, child);
     if (cur_Proc->pid == parent->pid) {
         return child_pid;
     } else {
@@ -754,6 +760,14 @@ int MyExec(ExceptionInfo *info, char *filename, char **argvec) {
 }
 
 /*
+Exit is the normal means of terminating a process. The current process is terminated, and the integer value of status is saved for later 
+collection by the parent process if the parent calls to Wait. However, when a process exits or is terminated by the kernel, if that process 
+has children, each of these children should continue to run normally, but it will no longer have a parent and is thus then referred to as an 
+“orphan” process. When such an orphan process later exits, its exit status is not saved or reported to its parent process since it no longer 
+has a parent process; 
+unlike in Unix, an orphan process is not “inherited” by any other process.
+When a process exits or is terminated by the kernel, all resources used by the calling process are freed, except for the saved status inform
+tion (if the process is not an orphan). The Exit kernel call can never return.
 kernel call for terminalling a process
 return status to its parent
 para: the status of this process
@@ -763,21 +777,28 @@ when a process exit, its resourses should be freed
 */
 void MyExit(int status){
 
+    // put child into parent child
+    if (cur_Proc->parent != NULL) {
+        add_statusQ(cur_Proc);
+    }
+    // if it is parent, child delete parent
+    pcb *tmp = cur_Proc->childQ;
+    while(tmp != NULL) {
+        tmp->parent = NULL;
+        tmp = tmp->childnext;
+    }
+
+    if (cur_Proc->pid == 0) 
+        return;
+    if (cur_Proc->pid == 1){
+        Halt();
+        return;
+    }
+
+
+    ContextSwitch(delayContextSwitch(), cur_Proc->ctx,cur_Proc,get_readyQ());
+    //  free the resources it used
     struct pcb *next_Proc;
-
-     // if it is idle, idle would never exit
-     if (cur_Proc->pid == 0)
-         return;
-
-     // if it is init
-     if (cur_Proc->pid == 1)
-         Halt();
-
-     // find the next process to run
-//     cur_Proc = readyQ;
-//     next_Proc =
-
-	TracePrintf(0,"Kernel call: Exit!.\n");
 }
 
 /*
@@ -800,12 +821,13 @@ int MyWait(int *status_ptr) {
         return ERROR;
     // if child queue is empty, block the calling process, return until one child is exit or terminated
     if (cur_Proc->child == NULL) {
-        ContextSwitch(delayContextSwitch(), cur_Proc->ctx,cur_Proc,get_readyQ);
+        ContextSwitch(delayContextSwitch(), cur_Proc->ctx,cur_Proc,get_readyQ());
+        add_waitQ(tmp);
+        return 
     }
-
-
-return return_pid;
-	TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+    return_pid = tmp->child->pid;
+    *status_ptr = tmp->child->status;
+    return return_pid;
 }
 
 /*Read the next line of input (or a portion of it) from terminal tty_id, copying the bytes of input into the buffer referenced by buf. 
@@ -922,7 +944,7 @@ void add_waitQ(pcb *p) {
     while(tmp != NULL) {
         tmp = tmp->waitnext;
     }
-    tmp = p;
+    *tmp = p;
 }
 
 pcb *get_waitQ() {
@@ -935,6 +957,33 @@ pcb *get_waitQ() {
     return tmp;
 }
 
+// add p to its parent's childQ
+void add_childQ(pcb *p) {
+    pcb *tmp = p->parent->childQ;
+    while(tmp != NULL) {
+        tmp = tmp->childnext;
+    }
+    *tmp = p;
+}
+
+// add pcb p's pid and status to the statusQ of its parent
+void add_statusQ(pcb *p) {
+    ChildStatus *tmp = p->parent->statusQ;
+    while(tmp != NULL) {
+        tmp = tmp->next;
+    }
+    tmp = (ChildStatus*)malloc(sizeof(Child));
+    tmp->pid = p->pid;
+    tmp->status = p->status;
+}
+
+ChildStatus *get_statusQ(pcb *p) {
+    if (p->statusQ == NULL)
+        return ERROR;
+    ChildStatus *tmp = p->statusQ;
+    p->statusQ = p->statusQ->next;
+    return return_child;
+}
 
 // find out the bottom of the user stack
 //unsigned long user_stack_bott(void) {
@@ -963,6 +1012,10 @@ unsigned long find_free_page() {
         return ret;
 }
 
+/*
+*   free the physical frame 
+*   para: the virual address of the frame
+*/
 int free_used_page(void* addr) {
     if (addr == NULL)
         return ERROR;
@@ -992,40 +1045,40 @@ void *va2pa(void *va) {
 }
 
 // find the first unused pte number in the current process's page table
-//unsigned long buf_region0() {
-//    if (free_page_num <= 0) return -1;
-//    unsigned long entry_number;
-//    pcb* curr = cur_Proc;
-//    pte* curr_table = curr->page_table;
-//    unsigned long i;
-//    for (i = MEM_INVALID_PAGES; i < PAGE_TABLE_LEN - 5; i++) {
-//        if (curr_table[i].valid == 0){
-//            curr_table[i].valid = 1;
-//            curr_table[i].kprot = PROT_READ | PROT_WRITE;
-//            curr_table[i].uprot = PROT_READ | PROT_EXEC;
-//            curr_table[i].pfn = find_free_page();
-//            entry_number = i;
-//            return entry_number;
-//        }
-//    }
-//    return -1;
-//}
-//
-//unsigned long buf_region1() {
-//    if (free_page_num <= 0) return -1;
-//    unsigned long entry_number;
-//    pte* curr_table = kernel_page_table;
-//    unsigned long i;
-//    for (i = 0; i < PAGE_TABLE_LEN; i++) {
-//        if (curr_table[i].valid == 0){
-//            curr_table[i].valid = 1;
-//            curr_table[i].kprot = PROT_READ | PROT_WRITE;
-//            curr_table[i].uprot = PROT_NONE;
-//            curr_table[i].pfn = find_free_page();
-//            entry_number = i;
-//            return entry_number;
-//        }
-//    }
-//    return -1;
-//}
+unsigned long buf_region0() {
+    if (free_addr_pgn <= 0) return -1;
+    unsigned long entry_number;
+    pcb* curr = cur_Proc;
+    pte* curr_table = curr->page_table;
+    unsigned long i;
+    for (i = MEM_INVALID_PAGES; i < PAGE_TABLE_LEN - 5; i++) {
+        if (!curr_table[i] == valid){
+            curr_table[i].valid = 1;
+            curr.kprot = PROT_READ | PROT_WRITE;
+            curr.uprot = PROT_READ | PROT_EXEC;
+            curr.pfn = find_free_page();
+            entry_number = i;
+            return entry_number;
+        } 
+    }
+    return -1;
+}
+
+unsigned long buf_region1() {
+    if (free_addr_pgn <= 0) return -1;
+    unsigned long entry_number;
+    pte* curr_table = kernel_page_table;
+    unsigned long i;
+    for (i = 0; i < PAGE_TABLE_LEN; i++) {
+        if (!curr_table[i] == valid){
+            curr_table[i].valid = 1;
+            curr.kprot = PROT_READ | PROT_WRITE;
+            curr.uprot = PROT_NONE;
+            curr.pfn = find_free_page();
+            entry_number = i;
+            return entry_number;
+        } 
+    }
+    return -1;
+}
 
