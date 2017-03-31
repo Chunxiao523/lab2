@@ -123,7 +123,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2);
 SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2);
 int MyGetPid();
 void *va2pa(void *va);
-
+unsigned long user_stack_bott();
 /**
  * The procedure named KernelStart is automatically called by the bootstrap firmware in the computer
  * initialize your operating system kernel and then return.
@@ -328,7 +328,7 @@ void TrapKernel(ExceptionInfo *info) {
     switch((*info).code)
     {
         case YALNIX_FORK:
-            (*info).regs[0] = NULL;
+            (*info).regs[0] = MyFork();
             break;
         case YALNIX_EXEC:
             (*info).regs[0] = MyExec(info, (char *)(info->regs[1]), (char **)(info->regs[2]));
@@ -337,13 +337,13 @@ void TrapKernel(ExceptionInfo *info) {
             (*info).regs[0] = MyExit((int)info->regs[1]);
             break;
         case YALNIX_WAIT:
-            (*info).regs[0] = NULL;
+            (*info).regs[0] = MyWait((int)info->regs[1]);
             break;
         case YALNIX_GETPID:
             (*info).regs[0] = MyGetPid();
             break;
         case YALNIX_BRK:
-            (*info).regs[0] = NULL;
+            (*info).regs[0] = MyBrk((void *)info->regs[1]);
             break;
         case YALNIX_DELAY:
             (*info).regs[0] = MyDelay((int)info->regs[1]);
@@ -438,7 +438,6 @@ void TrapMemory(ExceptionInfo *info){
 void TrapMath(ExceptionInfo *info) {
 
 }
-
 // int TtyReceive(int tty_id, void *buf, int len)
 // When the user completes an input line on a terminal, the RCS 421 hardware terminal controller will generate a TRAP_TTY_RECEIVE interrupt
 // for this terminal
@@ -459,7 +458,6 @@ void TrapMath(ExceptionInfo *info) {
 // is typed, TtyReceive returns 0 for this line. End of file behaves just like any other line of input, however. In particular, you can continue
 // to read more lines after an end of file. The data copied into your buffer by TtyReceive is not terminated with a null character (as would be
 // typical for a string in C); to determine the end of the characters returned in the buffer, you must use the length returned by TtyReceive.
-
 void TrapTTYReceive(ExceptionInfo *info) {
     //use TtyReceive to write line into buf in region 1, which return the acutual char
     int tty_id = info->code;
@@ -477,7 +475,6 @@ void TrapTTYReceive(ExceptionInfo *info) {
 //    }
 
 }
-
 void TrapTTYTransmit(ExceptionInfo *info) {
     int tty_id = info->code;
     //   ContextSwitch();
@@ -673,7 +670,7 @@ int MyGetPid() {
  */
 int MyDelay(int clock_ticks) {
     int i;
-    if(clock_ticks<0)
+    if(clock_ticks<0 || clock_ticks == NULL)
         return ERROR;
     cur_Proc->clock_ticks=clock_ticks;
     if(clock_ticks>0){
@@ -684,11 +681,10 @@ int MyDelay(int clock_ticks) {
 }
 
 /*
-set the loweast location not used by the program
-the actual break sould be rounded up to the pagesize
+set the lowest location not used by the program
+the actual break should be rounded up to the pagesize
 */
 int MyBrk(void *addr) {
-    // invalid assign
     if (addr == NULL)
         return ERROR;
 
@@ -696,8 +692,8 @@ int MyBrk(void *addr) {
     unsigned long brk_pgn = UP_TO_PAGE(cur_Proc->brk) >> PAGESHIFT;
     unsigned long i;
 
-//    if (addr_pgn >= user_stack_bott()-1)
-//        return ERROR;
+    if (addr_pgn >= user_stack_bott()-1)
+        return ERROR;
 
     // allocate
     if (addr_pgn >= brk_pgn) {
@@ -707,7 +703,6 @@ int MyBrk(void *addr) {
         for (i=MEM_INVALID_PAGES;i<addr_pgn;i++) {
             if (cur_Proc->page_table[i].valid == 0) {
                 cur_Proc->page_table[i].valid = 1;
-                cur_Proc->page_table[i].valid=1;
                 cur_Proc->page_table[i].uprot=PROT_READ|PROT_WRITE;
                 cur_Proc->page_table[i].kprot=PROT_READ|PROT_WRITE;
                 cur_Proc->page_table[i].pfn=find_free_page();
@@ -718,7 +713,7 @@ int MyBrk(void *addr) {
         for (i=brk_pgn;i>=addr_pgn;i--) {
             if (cur_Proc->page_table[i].valid == 1) {
                 cur_Proc->page_table[i].valid = 0;
-                free_used_page(i*PAGESIZE);
+                free_used_page(page_table[i]);
             }
         }
     }
@@ -778,7 +773,7 @@ if failure, return ERROR
 int MyExec(ExceptionInfo *info, char *filename, char **argvec) {
     TracePrintf(0,"Kernel Call: EXEC called! .\n", filename);
     int status;
-    status = LoadProgram(filename, argvec,info, process_page_table);
+    status = LoadProgram(filename, argvec, info, process_page_table);
     if (status == -1)
         return ERROR;
     // if (status == -2)
@@ -1028,13 +1023,13 @@ void add_childQ(pcb *p) {
 // }
 
 // find out the bottom of the user stack
-//unsigned long user_stack_bott(void) {
-//    unsigned long bottom;
-////    bottom = KERNEL_STACK_BASE >> PAGESHIFT - 1;
-////    while (process_page_table[bottom].valid)
-////        bottom--;
-//    return bottom;
-//}
+unsigned long user_stack_bott() {
+    unsigned long bottom;
+    bottom = KERNEL_STACK_BASE >> PAGESHIFT - 1;
+    while (process_page_table[bottom].valid == 1)
+        bottom--;
+    return bottom;
+}
 
 /**
  * Return a free page pfn from the linked list
@@ -1058,13 +1053,13 @@ unsigned long find_free_page() {
 *   free the physical frame
 *   para: the virual address of the frame
 */
-int free_used_page(void* addr) {
-    if (addr == NULL)
+int free_used_page(pte *free_page) {
+    if (free_page == NULL)
         return ERROR;
-    // pfn to address ?= pfn * pagesize;
-    free(addr);
-    TracePrintf(0, "free the page number address %d", addr);
-    free_page *tmp = (free_page*) malloc(sizeof(free_page));
+
+    free_page * tmp = free_page *
+                      malloc(sizeof(free_page));
+    tmp->phys_page_num = free_page->pfn;
     tmp->next = head->next;
     head->next = tmp;
     return 1;
