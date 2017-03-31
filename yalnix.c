@@ -644,7 +644,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
    // child->ctx = ctxp;
     memcpy(child->ctx, parent->ctx, sizeof(SavedContext));
     TracePrintf(0,"fork switch complete\n");
-    TracePrintf(0,"ctx%d\n", child->ctx);
+    TracePrintf(0,"ctx%d\n", &child->ctx);
     return &child->ctx;
 }
 
