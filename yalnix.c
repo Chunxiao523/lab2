@@ -783,7 +783,7 @@ int MyFork(void){
 
     TracePrintf(0, "come to ContextSwitch");
     // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
-    ContextSwitch(forkSwitch, child->ctx, parent, child);
+    ContextSwitch(forkSwitch, parent->ctx, parent, child);
     TracePrintf(0,"switch complete\n");
     if (cur_Proc->pid == parent->pid) {
         TracePrintf(0,"return id \n");
