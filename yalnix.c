@@ -273,7 +273,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
         cur_Proc = idle;
         TracePrintf(2, "Kernel Start: idle process pcb initialized.\n");
 
-        ContextSwitch(MyKernelSwitchFunc, idle->ctx, (void *) cur_Proc, (void *) init);
+        ContextSwitch(MyKernelSwitchFunc, cur_Proc->ctx, (void *) cur_Proc, (void *) init);
 
         if(cur_Proc->pid==0) //current running process is idle
             LoadProgram("idle",cmd_args, info, process_page_table);
@@ -641,7 +641,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
 
     cur_Proc = child;
     add_readyQ(parent);
-    memcpy(child->ctx, ctxp, sizeof(SavedContext));
+    memcpy(child->ctx, parent->ctx, sizeof(SavedContext));
     TracePrintf(0,"fork switch complete\n");
     TracePrintf(0,"ctx%d\n", child->ctx);
     return child->ctx;
@@ -782,7 +782,7 @@ int MyFork(void){
 
     TracePrintf(0, "come to ContextSwitch");
     // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
-    ContextSwitch(forkSwitch, parent->ctx, parent, child);
+    ContextSwitch(forkSwitch, cur_Proc->ctx, parent, child);
     TracePrintf(0,"switch complete\n");
     if (cur_Proc->pid == parent->pid) {
         TracePrintf(0,"return id \n");
