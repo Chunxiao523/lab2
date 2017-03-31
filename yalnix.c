@@ -585,11 +585,12 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
         /*
          * Find the first invalid page in kernel page table, as a buffer to help copy
          */
+        TracePrintf(2, "Working on %d\n", i);
         for (j = 0; j < PAGE_TABLE_LEN; j++) {
-            if (kernel_page_table[i].valid==0) {
+            if (kernel_page_table[j].valid==0) {
                 entry_number = j;
                 unsigned long p2_pfn = find_free_page();
-                TracePrintf(2, "Working on %d\n", i);
+
                 kernel_page_table[entry_number].valid = 1;
                 kernel_page_table[entry_number].uprot = PROT_NONE;
                 kernel_page_table[entry_number].kprot = PROT_READ | PROT_WRITE;
