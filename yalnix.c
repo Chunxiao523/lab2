@@ -943,6 +943,7 @@ void add_readyQ(pcb *p) {
     }
     while(temp -> readynext != NULL) {
         temp = temp->readynext;
+        TracePrintf(2, "while\n");
     }
     TracePrintf(2, "4\n");
     temp->readynext = p;
