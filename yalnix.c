@@ -580,19 +580,23 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     // return to the new context
     pcb* parent;
     pcb* child;
+    TracePrintf(0, "1\n");
     parent = (pcb*) p1;
     child = (pcb*)p2;
+    TracePrintf(0, "2\n");
     pte* pt1 = parent->page_table;
     pte* pt2 = child->page_table;
-
+    TracePrintf(0, "3\n");
     // try to find a buffer in the region 0, if no available, find it in region 1
    // unsigned long entry_num = buf_region0();
     unsigned long entry_num = 0;
     void *vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_0_BASE);
+    TracePrintf(0, "vaddr_entry%d \n", vaddr_entry);
     TracePrintf("forkSwitch: find a entry %d in region0 %d", entry_num, vaddr_entry);
     if (entry_num == -1) {
     //    entry_num = buf_region1();
         vaddr_entry = (void*) (long) ((entry_num * PAGESIZE) + VMEM_1_BASE);
+        TracePrintf(0, "vaddr_entry%d \n", vaddr_entry);
         TracePrintf("forkSwitch: find a entry %d in region1 %d", entry_num, vaddr_entry);
     }
     // if no available in region 1, return process1 itself
