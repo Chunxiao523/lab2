@@ -33,6 +33,7 @@ main()
     }
 
     new = malloc(10000);
+    fprintf(stderr, "brk successful\n", currbreak);
 
     Exit(0);
 }
