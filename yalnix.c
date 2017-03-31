@@ -363,9 +363,9 @@ void TrapClock(ExceptionInfo *info) {
     pcb *temp = delayQ;
 
     while (temp != NULL){
-        //  TracePrintf(2, "Kernel call: Trap clock\n");
+        TracePrintf(2, "Kernel call: delete the delay queue clock\n");
         temp->clock_ticks --;
-        TracePrintf(2, "Kernel call: Trap clock, delayQ clock ticks changes to %d\n", temp->delaynext->clock_ticks);
+      //  TracePrintf(2, "Kernel call: Trap clock, delayQ clock ticks changes to %d\n", temp->delaynext->clock_ticks);
         if(temp->clock_ticks == 0) {
             //add to ready queue
             add_readyQ(temp);
@@ -374,8 +374,8 @@ void TrapClock(ExceptionInfo *info) {
         temp = temp->delaynext;
     }
 
-
     if (readyQ != NULL) {
+        TracePrintf(2, "Kernel call: Trap clock Context switch!\n");
         ContextSwitch(clockSwitch, cur_Proc->ctx, cur_Proc, readyQ);
     }
     TracePrintf(2, "Kernel call: Finish one clock\n");
