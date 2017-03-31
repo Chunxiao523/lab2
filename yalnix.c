@@ -1053,22 +1053,22 @@ void delete_child(pcb *p) {
 
 // add pcb p's pid and status to the statusQ of its parent
 void add_statusQ(pcb *p) {
-    if (p->parent->statusQ == NULL) {
-        p->parent->statusQ = (ChildStatus*)malloc(sizeof(ChildStatus));
-        p->parent->statusQ->pid = p->pid;
-        p->parent->statusQ->status = p->status;
-        p->parent->statusQ->next = NULL;
-    } else {
-        ChildStatus *tmp = p->parent->statusQ;
-        wihle(tmp->next != NULL) {
-            tmp = tmp->next;
-        }
-        tmp->next = (ChildStatus*)malloc(sizeof(Child));
-        tmp = tmp->next;
-        tmp->pid = p->pid;
-        tmp->status = p->status;
-        p->next = NULL;
-    } 
+//    if (p->parent->statusQ == NULL) {
+//        p->parent->statusQ = (ChildStatus*)malloc(sizeof(ChildStatus));
+//        p->parent->statusQ->pid = p->pid;
+//        p->parent->statusQ->status = p->status;
+//        p->parent->statusQ->next = NULL;
+//    } else {
+//        ChildStatus *tmp = p->parent->statusQ;
+//        wihle(tmp->next != NULL) {
+//            tmp = tmp->next;
+//        }
+//        tmp->next = (ChildStatus*)malloc(sizeof(Child));
+//        tmp = tmp->next;
+//        tmp->pid = p->pid;
+//        tmp->status = p->status;
+//        p->next = NULL;
+//    }
 }
 
 // ChildStatus *get_statusQ(pcb *p) {
