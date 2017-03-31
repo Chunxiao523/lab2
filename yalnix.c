@@ -637,7 +637,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
         pt2[i].uprot = PROT_NONE;
     }
 
-    free_used_page(kernel_page_table[entry_num]);
+    free_used_page(kernel_page_table[entry_number]);
     WriteRegister(REG_PTR0, (RCS421RegVal)pt2);
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
     TracePrintf(0,"flush complete\n");
