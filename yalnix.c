@@ -577,6 +577,7 @@ SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
 SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     TracePrintf(0,"forkSwitch is called, ctx is %d \n", ctxp);
     unsigned long i;
+    unsigned long entry_num;
     // save the context to ctxp
     // return to the new context
     struct pcb* parent = (struct pcb*) p1;
@@ -585,7 +586,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     struct pte* pt2 = child->page_table;
 
     // try to find a buffer in the region 1, if no available, find it in region 1
-    unsigned long entry_num;
+
     for (i = 0; i < PAGE_TABLE_LEN; i++) {
         if (!kernel_page_table[i].valid){
             kernel_page_table[i].valid = 1;
@@ -631,48 +632,19 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
         WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
 
         // give the pfn from the temp memory to process 2's page table.
-        p2_pt[i].pfn = p2_pfn;
-        p2_pt[i].valid = 1;
-        p2_pt[i].kprot = PROT_READ|PROT_WRITE;
-        p2_pt[i].uprot = PROT_NONE;
+        pt2[i].pfn = p2_pfn;
+        pt2[i].valid = 1;
+        pt2[i].kprot = PROT_READ|PROT_WRITE;
+        pt2[i].uprot = PROT_NONE;
     }
 
-//
-//
-//
-//    for(i=0;i<PAGE_TABLE_LEN;i++) {
-//        pt2[i].valid = 0;
-//        if(currentProc->pt_r0[i].valid){
-//            pt2[i].valid = 1;
-//            if (i>=PAGE_TABLE_LEN-KERNEL_STACK_PAGES) pt2[i].uprot=PROT_NONE;
-//            else pt2[i].uprot=PROT_READ | PROT_WRITE;
-//            pt2[i].kprot= PROT_READ | PROT_WRITE;
-//            pt2[i].pfn = getFreePage();
-//            currentProc->pt_r0[addi_pte_vpn].valid = 1;//XXX
-//            currentProc->pt_r0[addi_pte_vpn].uprot = PROT_NONE;//XXX
-//            currentProc->pt_r0[addi_pte_vpn].kprot = PROT_READ | PROT_WRITE;//XXX
-//            currentProc->pt_r0[addi_pte_vpn].pfn = pt2[i].pfn;//XXX
-//            memcpy((void*)(addi_pte_vpn<<PAGESHIFT),(void *)(i<<PAGESHIFT),PAGESIZE);//XXX
-//            currentProc->pt_r0[addi_pte_vpn].valid = 0;
-//            WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
-//        }
-//    }
-    // free the buffer and disable that entry in the page table
     free_used_page(kernel_page_table[entry_num]);
-   // pt1[entry_num].valid = 0;
-    // copy the saved context
     WriteRegister(REG_PTR0, (RCS421RegVal)pt2);
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
     TracePrintf(0,"flush complete\n");
-    // change the process to child, add the parent to the ready queue
-
-    TracePrintf(0,"REG_PTR0 complete\n");
-   // child->ctx = ctxp;
     memcpy(((pcb *)p2)->ctx, ctxp, sizeof(SavedContext));
     cur_Proc = child;
     add_readyQ(parent);
-    TracePrintf(0,"fork switch complete\n");
-    TracePrintf(0,"ctx%d\n", &child->ctx);
     return ((pcb *)p2)->ctx;
 }
 
