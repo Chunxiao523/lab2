@@ -89,6 +89,7 @@ typedef void (*interrupt_handler)(ExceptionInfo *info);
  * Linked list to store the free pages
  */
 free_page *head;
+free_page *newpage;
 
 int free_page_num;
 
@@ -1056,7 +1057,7 @@ unsigned long find_free_page() {
 int free_used_page(pte *free_page) {
     if (free_page == NULL)
         return ERROR;
-    free_page *newpage;
+
     newpage = malloc(sizeof(free_page));
     newpage->phys_page_num = free_page->pfn;
     newpage->next = head->next;
