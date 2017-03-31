@@ -606,11 +606,13 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     for (i = 0; i < PAGE_TABLE_LEN; i++) {
         if (pt1[i].valid && i != entry_num) {
             memcpy(vaddr_entry, (void *)(long)((i * PAGESIZE) + VMEM_0_BASE), PAGESIZE);
+            TracePrintf(0, "ememcopy complete");
             pt2[i].valid = 1;
             pt2[i].uprot = pt1[i].uprot;
             pt2[i].kprot = pt2[i].kprot;
             pt2[i].pfn = pt1[entry_num].pfn;
             WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
+            TracePrintf(0, "flush complete");
             pt1[entry_num].pfn = find_free_page();
         }
     }
