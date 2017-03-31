@@ -863,7 +863,7 @@ void MyExit(int status){
         delete_child(cur_Proc);
         TracePrintf(0, "myexit: delete_child");
         if (cur_Proc->parent->child_num == 0) {
-            add_readyQ(p->parent);
+          //  add_readyQ(p->parent);
             TracePrintf(0, "myexit: parent it put to readyqueue");
         }
     }
