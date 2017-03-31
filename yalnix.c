@@ -148,7 +148,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     delayQ = (pcb *)malloc(sizeof(pcb));
     readyQ = NULL;
     delayQ = NULL;
-    // readyQ->readynext = NULL;
+    readyQ->readynext = NULL;
     // delayQ->delaynext = NULL;
     /*
      * Initialize the interrupt table
@@ -943,7 +943,7 @@ void add_readyQ(pcb *p) {
     }
     while(temp -> readynext != NULL) {
         temp = temp->readynext;
-        TracePrintf(2, "while\n");
+        TracePrintf(2, "whilemake\n");
     }
     TracePrintf(2, "4\n");
     temp->readynext = p;
