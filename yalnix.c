@@ -1057,7 +1057,7 @@ int free_used_page(pte *free_page) {
     if (free_page == NULL)
         return ERROR;
     free_page *newpage;
-    free_page *newpage = malloc(sizeof(free_page));
+    newpage = malloc(sizeof(free_page));
     newpage->phys_page_num = free_page->pfn;
     newpage->next = head->next;
     head->next = newpage;
