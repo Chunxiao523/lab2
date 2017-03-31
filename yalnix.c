@@ -148,7 +148,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     delayQ = (pcb *)malloc(sizeof(pcb));
     readyQ = NULL;
     delayQ = NULL;
-    readyQ->readynext = NULL;
+    // readyQ->readynext = NULL;
     // delayQ->delaynext = NULL;
     /*
      * Initialize the interrupt table
@@ -641,7 +641,7 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
 
     cur_Proc = child;
     add_readyQ(parent);
-
+    TracePrintf(0,"fork switch complete\n");
     return child->ctx;
 }
 
@@ -780,9 +780,12 @@ int MyFork(void){
     TracePrintf(0, "come to ContextSwitch");
     // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
     ContextSwitch(forkSwitch, parent->ctx, parent, child);
+    TracePrintf(0,"switch complete\n");
     if (cur_Proc->pid == parent->pid) {
+        TracePrintf(0,"return id \n");
         return child_pid;
     } else {
+        TracePrintf(0,"id\n");
         return 0;
     }
 }
