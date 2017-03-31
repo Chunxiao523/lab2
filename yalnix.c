@@ -5,6 +5,9 @@
  */
 void *kernel_cur_break;
 
+
+"fjfkalsjfdlas"
+
 /*
  * flag to indicate if you have yet enabled virtual memory
  * 0: not, 1: yes
@@ -438,8 +441,27 @@ void TrapMath(ExceptionInfo *info) {
 
 }
 
-// when terminal has typing return, hardware produce a trapttyreceive to kernel
-// this handler is to read newline into readbuffer located in region1
+// int TtyReceive(int tty_id, void *buf, int len)
+// When the user completes an input line on a terminal, the RCS 421 hardware terminal controller will generate a TRAP_TTY_RECEIVE interrupt 
+// for this terminal 
+
+// The terminal number of the terminal generating the interrupt will be made available to the kernel’s interrupt handler for this type of 
+// interrupt. In the interrupt handler, the kernel should execute a TtyReceive operation for this terminal, in order to retrieve 
+// the new input line from the hardware. 
+
+// The new input line is copied from the hardware for terminal tty_id into the kernel buffer at virtual address buf, 
+//  for maximum length to copy of len bytes. The value of len must be equal to TERMINAL_MAX_LINE bytes, 
+// The buffer must be in the kernel’s virtual memory (i.e., it must be entirely within virtual memory Region 1). 
+// After each TRAP_TTY_RECEIVE interrupt, the kernel must do a TtyReceive and save the new input line in a buffer inside the kernel, 
+// e.g., until a user process requests the next line from the terminal by executing 
+// a kernel call to read from this device.
+
+// The actual length of the new input line, including the newline (’\n’), is returned as the return value of TtyReceive. Thus when a blank line
+// is typed, TtyReceive will return a 1, since the blank line is terminated by a newline character. When an end of file character (control-D) 
+// is typed, TtyReceive returns 0 for this line. End of file behaves just like any other line of input, however. In particular, you can continue 
+// to read more lines after an end of file. The data copied into your buffer by TtyReceive is not terminated with a null character (as would be
+// typical for a string in C); to determine the end of the characters returned in the buffer, you must use the length returned by TtyReceive.
+
 void TrapTTYReceive(ExceptionInfo *info) {
     //use TtyReceive to write line into buf in region 1, which return the acutual char
     int tty_id = info->code;
@@ -612,11 +634,17 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
 SavedContext *exitSwitch(SavedContext *ctxp, void *p1, void *p2) {
     unsigned long i;
     pte *pt = cur_Proc->page_table;
+
+    // free the used page
     for (i = 0; i < PAGE_TABLE_LEN; i++) {
         if (pt[i] == valid) {
-            free_page()
+            free_used_page((long) (i * PAGESIZE + VMEM_0_BASE));
         }
     }
+
+
+    // free the page table 
+
 }
 // 
 // SavedContext *waitSwitch(SavedContext *ctxp, void *p1, void *p2) {
