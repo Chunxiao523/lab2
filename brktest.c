@@ -13,15 +13,15 @@ main()
 
     currbreak = sbrk(0);
 
-    fprintf(stderr, "sbrk(0) = %p\n", currbreak);
+    fprintf(stderr, "sbrk(0) = %p,  %d\n", currbreak, Brk(currbreak));
 
     currbreak = (void *)UP_TO_PAGE(currbreak);
     currbreak++;
     currbreak = (void *)UP_TO_PAGE(currbreak);
-
+    fprintf(stderr, "sbrk(0) = %p,  %d\n", currbreak, Brk(currbreak));
     if (Brk(currbreak)) {
-	fprintf(stderr, "Brk %p returned error\n", currbreak);
-	Exit(1);
+        fprintf(stderr, "Brk %p returned error\n", currbreak);
+        Exit(1);
     }
     fprintf(stderr, "This is called \n", currbreak);
 
@@ -29,8 +29,8 @@ main()
     currbreak = (void *)UP_TO_PAGE(currbreak);
 
     if (Brk(currbreak)) {
-	fprintf(stderr, "Brk %p returned error\n", currbreak);
-	Exit(1);
+        fprintf(stderr, "Brk %p returned error\n", currbreak);
+        Exit(1);
     }
     fprintf(stderr, "This is called \n", currbreak);
     new = malloc(10000);
