@@ -884,6 +884,7 @@ void MyExit(int status){
     TracePrintf(0,"Kernel call: Enter the Exit Kernel call\n");
     // if it is init or idle
     if(cur_Proc->pid==0||cur_Proc->pid==1){
+        TracePrintf(0,"Kernel call: halt later\n");
         Halt();
     }
     // if it is parent, child delete parent
