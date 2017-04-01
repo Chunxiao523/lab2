@@ -749,11 +749,16 @@ int MyBrk(void *addr) {
     } else {
         // deallocate
         TracePrintf(0, "Kernel Call: deallocation\n");
-        for (i=brk_pgn;i>=addr_pgn;i--) {
+        for (i=brk_pgn;i>addr_pgn;i--) {
             if (cur_Proc->page_table[i].valid == 1) {
                 cur_Proc->page_table[i].valid = 0;
                 TracePrintf(0, "Kernel Call: %d\n", i);
                 free_used_page(cur_Proc->page_table[i]);
+            } else {
+                if(current_process->pgt[orig_vfn].valid == 0){
+                    fprintf(stderr," pte %ld has not been mapped yet!\n", i);
+                    return ERROR;
+
             }
         }
     }
