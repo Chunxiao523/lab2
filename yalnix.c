@@ -944,9 +944,9 @@ by the status_ptr argument. On any error, this call instead returns ERROR.
      // if child status queue is empty, block the calling process, change to the next process, return until one child is exit or terminated
      if (cur_Proc->statusQ == NULL) {
           cur_Proc->waitcalling = 1;
-          ContextSwitch(delayContextSwitch, cur_Proc->ctx, cur_Proc, get_readQ());
+          ContextSwitch(delayContextSwitch, cur_Proc->ctx, cur_Proc, get_readyQ());
      } else {
-        statusNode *tmp = get_statusQ();
+        ChildStatus *tmp = get_statusQ();
         return_pid = tmp->pid;
         *status_ptr = tmp->status;
         cur_Proc->waitcalling = 0;
