@@ -910,11 +910,13 @@ void MyExit(int status){
         TracePrintf(0, "report status to its parent\n");
         delete_child(cur_Proc);
         TracePrintf(0, "myexit: delete_child");
-
         if (cur_Proc->parent->childQ == NULL) {
             add_readyQ(cur_Proc->parent);
             TracePrintf(0, "myexit: parent it put to readyqueue");
         }
+        if (cur_Proc->parent->waitcalling == 1) {
+            ContextSwitch(exitContextSwitch,cur_Proc->ctx, cur_Proc,cur_Proc->parent);
+        }        
     }
     TracePrintf(0,"Kernel call: Exit context switch\n");
     ContextSwitch(exitContextSwitch, cur_Proc->ctx, cur_Proc, get_readyQ());
@@ -965,7 +967,7 @@ than len bytes, only the first len bytes of the line are copied to the calling p
  */
 // XXX
 int TtyRead(int term_id, void *buf, int len) {
-    TracePrintf(0, "TtyRead: is called, the return len is %d", return_len);
+    // TracePrintf(0, "TtyRead: is called, the return len is %d", return_len);
     int return_len;
 
     // error call
