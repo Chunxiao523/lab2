@@ -103,13 +103,13 @@ int entry_number;
 /*
 define the terminals, which holds the read queue, write queue, readbuffer, writebuffer for each terms
 */
-struct terminal
+typedef struct terminal
 {
     char *readBuff[256];
-    int buf_ch_cnt;
+    unsigned long buf_ch_cnt;
     char *writeBuffer;
     struct ReadNode *readQ;
-};
+} Terminal;
 
 /*
  * child of a process which store its pid and status
@@ -484,7 +484,7 @@ void TrapMath(ExceptionInfo *info) {
 // to read more lines after an end of file. The data copied into your buffer by TtyReceive is not terminated with a null character (as would be
 // typical for a string in C); to determine the end of the characters returned in the buffer, you must use the length returned by TtyReceive.
 
-// NOW
+// QQQ
 void TrapTTYReceive(ExceptionInfo *info) {
     //use TtyReceive to write line into buf in region 1, which return the acutual char
     int term_id = info->code;
@@ -668,6 +668,14 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
         cur_Proc = ((pcb *)p2);
     }
+    return cur_Proc->ctx;
+}
+
+/*common contest switch*/
+SavedContext *commonContextSwitch(SavedContext *ctxp, void *p1, void *p2){
+        WriteRegister(REG_PTR0, (RCS421RegVal)((pcb *)p2)->page_table); // Set the register for region 0
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+        cur_Proc = ((pcb *)p2);
     return cur_Proc->ctx;
 }
 
@@ -900,23 +908,40 @@ than len bytes, only the first len bytes of the line are copied to the calling p
  is shorter than len bytes, only as many bytes are copied to the calling process’s buffer as are available in the input line. On success,
  the number of bytes actually copied into the calling process’s buffer is returned; in case of any error, the value ERROR is returned.
  */
-
+// XXX
 int TtyRead(int term_id, void *buf, int len) {
-    // if (len < 0 || buf == NULL)
-    //     return ERROR;
-    // if (len == 0)
-    //     return 0;
-    // // while (terms[term_id].char_num == 0) blocked;
-    // if (len <= terms[term_id].char_num) {
-    //     memcpy(buf,terms[term_id].readBuffer, len);
-    //     return len;
-    // }
-    // else {
-    //     memcpy(buf, terms[term_id].readBuffer, terms[term_id].char_num);
-    //     return terms[term_id].char_num;
-    // }
-    // return 0;
-    // TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+    int return_len;
+
+    // error call
+    if (len < 0 || buf == NULL)
+        return ERROR;
+    // call len == 0
+    if (len == 0)
+        return 0;
+
+    // if buff is empty, the read is put into the readQ until there is something to read
+    if (terms[term_id].buf_ch_cnt == 0) {
+        add_readQ(cur_Proc, terms[term_id]);
+    }
+
+    // read.. 
+    unsigned long cnt = terms[term_id].buf_ch_cnt;
+    // if read length is less then bufferd char
+    if (len <= cnt) {
+        // copy len char from terminal buffer into buf
+        memcpy(buf, terms[term_id].readBuff, len);
+        memcpy(terms[term_id].readBuff, len + terms[term_id].readBuff, cnt-len);
+        return_len = len;
+        // if readQ is not empty, continue to read left char in terminal buff
+        if (terms[term_id].readQ != NULL) {
+            ContextSwitch(commonContextSwitch,cur_Proc->ctx, cur_Proc, get_readQ(terms[term_id]));
+        }
+    } else {
+        memcpy(buf, terms[term_id].readBuff, cnt);
+        terms[term_id].buf_ch_cnt = 0;
+        return_len = cnt;
+    }
+    return return_len;
 }
 
 /*Write the contents of the buffer referenced by buf to the terminal term_id. The length of the buffer in bytes is given by len
@@ -944,20 +969,6 @@ void add_readyQ(pcb *p) {
     p->readypre = temp;
     TracePrintf(2, "ready complete\n");
 }
-
-// add a process into the readyqueue
-// void add_readyQ(pcb *p) {
-//     TracePrintf(2, "Add a new process to ready queue\n");
-//     if (readyQ == NULL) {
-//         readyQ = p;
-//         return;}
-//     pcb *temp = readyQ;
-//     while (temp->readynext != NULL) {
-//         temp = temp->readynext;
-//     }
-//     temp->readynext = p;
-//     TracePrintf(2, "ready complete\n");
-// }
 
 pcb *get_readyQ() {
     if (readyQ == NULL) {
@@ -1070,6 +1081,32 @@ void add_statusQ(int status) {
 //     p->statusQ = p->statusQ->next;
 //     return tmp;
 // }
+//NOW
+// put a process into read queue of a terminla
+void add_readQ(pcb *p, Terminal term) {
+    ReadNode *tmp;
+    tmp = term.readQ;
+    if (tmp == NULL) {
+        tmp = (ReadNode*) malloc(sizeof(ReadNode));
+        term.readQ = tmp;
+        tmp->node = p;
+        tmp->next = NULL;
+    } else {
+        while(tmp->next!=NULL)
+            tmp = tmp->next;
+        tmp->next = (ReadNode*) malloc(sizeof(ReadNode));
+        tmp = tmp->next;
+        tmp->node = p;
+        tmp->next = NULL;
+    }
+}
+
+// get the pcb of the readnode, which is the head of the readQ of given terminal
+pcb *get_readQ(Terminal term) {
+    pcb *tmp = term.readQ->node;
+    term.readQ = term.readQ->next;
+    return tmp;
+}
 
 // find out the bottom of the user stack
 unsigned long user_stack_bott() {
