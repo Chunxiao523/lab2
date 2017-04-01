@@ -757,6 +757,7 @@ int MyBrk(void *addr) {
         }
     }
     cur_Proc->brk = (unsigned long)addr;
+    TracePrintf(0, "Brk finished\n");
     return 0;
 }
 
@@ -1146,8 +1147,9 @@ unsigned long find_free_page() {
 
 */
 int free_used_page(pte page_entry) {
+    TracePrintf(0,"Free the used page\n");
     free_page *newpage = (free_page*)malloc(sizeof(free_page));
-    TracePrintf(0,"newpage complag\n");
+
     newpage->phys_page_num = page_entry.pfn;
     newpage->next = head->next;
     head->next = newpage;
