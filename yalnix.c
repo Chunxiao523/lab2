@@ -48,6 +48,7 @@ typedef struct pcb {
     struct pcb *waitnext;
     struct pcb *delaypre;
     struct pcb *readypre;
+
     struct ChildStatus *statusQ;
     struct ChildNode *childQ;
 } pcb;
@@ -589,7 +590,7 @@ SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2) {
     return pcb_ptr2->ctx;
 }
 SavedContext *delayContextSwitch(SavedContext *ctxp, void *p1, void *p2){
-    if(readyQ == NULL) {
+    if(p2 == NULL) {
         WriteRegister(REG_PTR0, (RCS421RegVal)idle->page_table); // Set the register for region 0
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
         cur_Proc = idle;
@@ -666,21 +667,19 @@ SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
 
 SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
     unsigned long i;
+    ChildStatus *statusbuf;
     struct pte *pt1 = ((pcb*)p1)->page_table;
     // free all the physical mem frame of p1
     for (i = 0; i < PAGE_TABLE_LEN; i++) {
         if (pt1[i].valid) {
             free_used_page(pt1[i]);
+            pt1[i].valid = 0;
         }
     }
-    // free its pcb content
-
-    // free(p1->ctx);
-
     // free its status queue
     //
     // switch to the next process in the readyQ
-    if(readyQ == NULL) {
+    if(p2 == NULL) {
         WriteRegister(REG_PTR0, (RCS421RegVal)idle->page_table); // Set the register for region 0
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
         cur_Proc = idle;
@@ -689,6 +688,17 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
         cur_Proc = ((pcb *)p2);
     }
+
+    free((pcb *)p1->ctx);
+
+    while ((pcb *)p1->statusQ != NULL) {
+        statusbuf=((pcb*)p1)->statusQ;
+        ((pcb*)p1)->statusQ=((pcb*)p1)->statusQ->next;
+        free(statusbuf);
+    }
+    free((pcb *)p1);
+
+
     return cur_Proc->ctx;
 }
 
@@ -730,7 +740,7 @@ int MyDelay(int clock_ticks) {
     cur_Proc->clock_ticks=clock_ticks;
     if(clock_ticks>0){
         add_delayQ(cur_Proc);
-        ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,readyQ);
+        ContextSwitch(delayContextSwitch,cur_Proc->ctx,cur_Proc,get_readyQ());
     }
     return 0;
 }
@@ -791,11 +801,6 @@ int MyBrk(void *addr) {
     TracePrintf(0, "Brk finished\n");
     return 0;
 }
-
-
-
-
-
 /* input args: nond
  * return val: process ID for parent process, 0 for child process
  * child process's address is a copy of parent process's address space, the copy should include
@@ -878,8 +883,6 @@ void MyExit(int status){
     if(cur_Proc->pid==0||cur_Proc->pid==1){
         Halt();
     }
-
-
     // if it is parent, child delete parent
     if (cur_Proc->childQ != NULL) {
         ChildNode *tmp = cur_Proc->childQ;
@@ -905,7 +908,7 @@ void MyExit(int status){
             TracePrintf(0, "myexit: parent it put to readyqueue");
         }
     }
-   // ContextSwitch(exitContextSwitch, cur_Proc->ctx, cur_Proc, readyQ);
+    ContextSwitch(exitContextSwitch, cur_Proc->ctx, cur_Proc, get_readyQ());
     return 0;
  }
 
