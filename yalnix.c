@@ -516,7 +516,7 @@ void TrapTTYTransmit(ExceptionInfo *info) {
     int term_id = info->code;
     terms[term_id].writing = 0;
     if (terms[term_id].writeQ != NULL) {
-        ContextSwitch(commonContextSwitch, cur_Proc->ctx, cur_Proc, get_writeQ(terms[term_id]));
+     //   ContextSwitch(commonContextSwitch, cur_Proc->ctx, cur_Proc, get_writeQ(terms[term_id]));
     } else {
         ContextSwitch(commonContextSwitch, cur_Proc->ctx, cur_Proc, get_readQ(terms[term_id]));
     }
