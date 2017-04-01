@@ -42,7 +42,7 @@ typedef struct pcb {
     pte * page_table;
     int clock_ticks;
     unsigned long brk;
-    struct pcb parent;
+    struct pcb *parent;
     struct pcb *readynext;
     struct pcb *delaynext;
     struct pcb *waitnext;
@@ -825,7 +825,7 @@ if a child is terminate, it report status to its wait parent
 if a parent is terminate, its child's parent become null
 when a process exit, its resourses should be freed
 */
-void MyExit(int status){
+int MyExit(int status){
     // if it is init or idle
     if(cur_Proc->pid==0||cur_Proc->pid==1)
         Halt();
@@ -856,6 +856,7 @@ void MyExit(int status){
         }
     }
    // ContextSwitch(exitContextSwitch, cur_Proc->ctx, cur_Proc, readyQ);
+    return 0;
  }
 
 /*
