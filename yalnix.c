@@ -158,6 +158,7 @@ void add_readQ(pcb *p, Terminal term);
 void add_writeQ(pcb *p, Terminal term);
 pcb *get_readyQ();
 pcb *get_WriteQ(Terminal term);
+pcb *init_pcb();
 /**
  * The procedure named KernelStart is automatically called by the bootstrap firmware in the computer
  * initialize your operating system kernel and then return.
@@ -322,14 +323,16 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
             LoadProgram("idle", cmd_args, info, process_page_table);
             cur_Proc->brk = cur_brk;
+            cur_Proc->pid = 0;
         } else if(cur_Proc->pid==1) {
             if (cmd_args==NULL || cmd_args[0]==NULL) {
                 LoadProgram("init",cmd_args,info, init_page_table);
                 cur_Proc->brk = cur_brk;
+                cur_Proc->pid = 1;
             }
             else {
                 LoadProgram(cmd_args[0], cmd_args, info, init_page_table);
-                cur_Proc->brk = cur_brk;
+                cur_Proc = init_pcb();
                 fprintf(stderr,  "Kernel Start: running your process now.\n");
             }
         }
@@ -516,7 +519,7 @@ void TrapTTYTransmit(ExceptionInfo *info) {
     int term_id = info->code;
     terms[term_id].writing = 0;
     if (terms[term_id].writeQ != NULL) {
-        ContextSwitch(commonContextSwitch, cur_Proc->ctx, cur_Proc, get_writeQ(terms[term_id]));
+     //   ContextSwitch(commonContextSwitch, cur_Proc->ctx, cur_Proc, get_writeQ(terms[term_id]));
     } else {
         ContextSwitch(commonContextSwitch, cur_Proc->ctx, cur_Proc, get_readQ(terms[term_id]));
     }
@@ -678,9 +681,7 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
             pt1[i].valid = 0;
         }
     }
-    // free its status queue
-    //
-    // switch to the next process in the readyQ
+    TracePrintf(0,"Kernel call: Free its physical frams\n");
     if(p2 == NULL) {
         WriteRegister(REG_PTR0, (RCS421RegVal)idle->page_table); // Set the register for region 0
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
@@ -690,7 +691,7 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
         cur_Proc = ((pcb *)p2);
     }
-
+    TracePrintf(0,"Kernel call: register changed and flush\n");
     free(((pcb *)p1)->ctx);
 
     while (((pcb *)p1)->statusQ != NULL) {
@@ -700,7 +701,7 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
     }
     free((void*)(pcb *)p1);
 
-
+    TracePrintf(0,"Kernel call: Context switch finished\n");
     return cur_Proc->ctx;
 }
 
@@ -860,6 +861,7 @@ int MyExec(ExceptionInfo *info, char *filename, char **argvec) {
     TracePrintf(0,"Kernel Call: EXEC called! .\n", filename);
     int status;
     status = LoadProgram(filename, argvec, info, process_page_table);
+
     if (status == -1)
         return ERROR;
     // if (status == -2)
@@ -881,12 +883,15 @@ if a parent is terminate, its child's parent become null
 when a process exit, its resourses should be freed
 */
 void MyExit(int status){
+    TracePrintf(0,"Kernel call: Enter the Exit Kernel call\n");
     // if it is init or idle
     if(cur_Proc->pid==0||cur_Proc->pid==1){
+        TracePrintf(0,"Kernel call: halt later\n");
         Halt();
     }
     // if it is parent, child delete parent
     if (cur_Proc->childQ != NULL) {
+        TracePrintf(0,"Kernel call: This process has child\n");
         ChildNode *tmp = cur_Proc->childQ;
         while(tmp != NULL) {
             tmp->node->parent = NULL;
@@ -900,7 +905,7 @@ void MyExit(int status){
     // delete itself from childQ of its parent, check if the parent should be assigned to the readyQ
     if (cur_Proc->parent != NULL) {
         TracePrintf(0, "myexit: exit process has parent\n");
-        add_statusQ(cur_Proc);
+        add_statusQ(status);
         TracePrintf(0, "report status to its parent\n");
         delete_child(cur_Proc);
         TracePrintf(0, "myexit: delete_child");
@@ -910,6 +915,7 @@ void MyExit(int status){
             TracePrintf(0, "myexit: parent it put to readyqueue");
         }
     }
+    TracePrintf(0,"Kernel call: Exit context switch\n");
     ContextSwitch(exitContextSwitch, cur_Proc->ctx, cur_Proc, get_readyQ());
     return 0;
  }
@@ -1336,4 +1342,20 @@ void allocPageTable(pcb* p) {
     }
 }
 
-
+pcb *init_pcb() {
+    pcb *newpcb =  (pcb *)malloc(sizeof(pcb));
+    newpcb->ctx = (SavedContext *)malloc(sizeof(SavedContext));;
+    newpcb->delaynext = NULL;
+    newpcb->brk = cur_brk;
+    newpcb->childQ = NULL;
+    newpcb->clock_ticks = 2;
+    newpcb->delaypre = NULL;
+    newpcb->page_table = process_page_table;
+    newpcb->parent = NULL;
+    newpcb->pid = pid++;
+    newpcb->readynext = NULL;
+    newpcb->readypre = NULL;
+    newpcb->statusQ = NULL;
+    newpcb->waitnext=NULL;
+    return newpcb;
+}
