@@ -359,7 +359,7 @@ void TrapKernel(ExceptionInfo *info) {
             (*info).regs[0] = MyExec(info, (char *)(info->regs[1]), (char **)(info->regs[2]));
             break;
         case YALNIX_EXIT:
-            (*info).regs[0] = MyExit((int)info->regs[1]);
+            MyExit((int)info->regs[1]);
             break;
         case YALNIX_WAIT:
             (*info).regs[0] = MyWait((int)info->regs[1]);
@@ -825,7 +825,7 @@ if a child is terminate, it report status to its wait parent
 if a parent is terminate, its child's parent become null
 when a process exit, its resourses should be freed
 */
-int MyExit(int status){
+void MyExit(int status){
     // if it is init or idle
     if(cur_Proc->pid==0||cur_Proc->pid==1)
         Halt();
