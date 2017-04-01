@@ -944,9 +944,9 @@ by the status_ptr argument. On any error, this call instead returns ERROR.
      // if child status queue is empty, block the calling process, change to the next process, return until one child is exit or terminated
      if (cur_Proc->statusQ == NULL) {
           cur_Proc->waitcalling = 1;
-          ContextSwitch(delayContextSwitch, cur_Proc->ctx, cur_Proc, get_readQ());
+          ContextSwitch(delayContextSwitch, cur_Proc->ctx, cur_Proc, get_readyQ());
      } else {
-        statusNode *tmp = get_statusQ();
+        ChildStatus *tmp = get_statusQ();
         return_pid = tmp->pid;
         *status_ptr = tmp->status;
         cur_Proc->waitcalling = 0;
@@ -965,6 +965,7 @@ than len bytes, only the first len bytes of the line are copied to the calling p
  */
 // XXX
 int TtyRead(int term_id, void *buf, int len) {
+    TracePrintf(0, "TtyRead: is called, the return len is %d", return_len);
     int return_len;
 
     // error call
@@ -995,7 +996,9 @@ int TtyRead(int term_id, void *buf, int len) {
         memcpy(buf, terms[term_id].readBuff, cnt);
         terms[term_id].buf_ch_cnt = 0;
         return_len = cnt;
+        // TracePrintf(0, "TtyRead: is complte, the return len is %d", return_len);
     }
+    TracePrintf(0, "TtyRead: is complte, the return len is %d");
     return return_len;
 }
 
