@@ -105,15 +105,19 @@ define the terminals, which holds the read queue, write queue, readbuffer, write
 */
 struct terminal
 {
-    pcb *readQ_head;
-    pcb *readQ_tail;
-    pcb *writeQ_head;
-    pcb *writeQ_tail;
-    char *readBuffer;
-    int readed;
+    char *readBuff[256];
+    int buf_ch_cnt;
     char *writeBuffer;
-    int char_num;
+    struct ReadNode *readQ;
 };
+
+/*
+ * child of a process which store its pid and status
+ */
+typedef struct ReadNode{
+    struct pcb *node;
+    struct ReadNode *next;
+} ReadNode;
 
 struct terminal terms[NUM_TERMINALS];
 //terminal terms[NUM_TERMINALS];
@@ -203,6 +207,14 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
             free(t);
         }
         else pointer = pointer->next;
+    }
+
+    /* initialize the terminals*/
+    /* initialize the terminal */
+
+    for(i=0;i<NUM_TERMINALS;i++){
+        terms[i].buf_ch_cnt=0;
+        terms[i].readQ=NULL;
     }
 
 
@@ -471,23 +483,16 @@ void TrapMath(ExceptionInfo *info) {
 // is typed, TtyReceive returns 0 for this line. End of file behaves just like any other line of input, however. In particular, you can continue
 // to read more lines after an end of file. The data copied into your buffer by TtyReceive is not terminated with a null character (as would be
 // typical for a string in C); to determine the end of the characters returned in the buffer, you must use the length returned by TtyReceive.
+
+// NOW
 void TrapTTYReceive(ExceptionInfo *info) {
     //use TtyReceive to write line into buf in region 1, which return the acutual char
-    int tty_id = info->code;
-    int char_num;
-    char_num = TtyReceive(tty_id, terms[tty_id].readBuffer + terms[tty_id].readed, TERMINAL_MAX_LINE);
-    terms[tty_id].readed += char_num;
-    // need context switch here?
-
-//    int tty_id = info->code;
-//    int char_num;
-//    char_num = TtyReceive(tty_id, buf, TERMINAL_MAX_LINE);
-//
-//    if (terms[tty_id].readQueue!= NULL) {
-//    //    ContextSwitch(, cur_Proc->ctx, cur_Proc, ready_queue);
-//    }
-
+    int term_id = info->code;
+    int received_cnt;
+    received_cnt = TtyReceive(term_id, terms[term_id].readBuff + terms[term_id].buf_ch_cnt, TERMINAL_MAX_LINE);
+    terms[tty_id].buf_ch_cnt += received_cnt;
 }
+
 void TrapTTYTransmit(ExceptionInfo *info) {
     int tty_id = info->code;
     //   ContextSwitch();
