@@ -757,7 +757,7 @@ int MyBrk(void *addr) {
         }
     }
     cur_Proc->brk = (unsigned long)addr;
-    TracePrintf(0, "Brk finished\n");
+    TracePrintf(0, "Brk finished %d\n", cur_Proc->brk);
     return 0;
 }
 
