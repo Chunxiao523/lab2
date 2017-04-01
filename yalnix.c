@@ -985,13 +985,13 @@ void add_delayQ(pcb *p) {
     temp->delaynext = p;
 }
 
-// void add_waitQ(pcb *p) {
+ void add_waitQ(pcb *p) {
 //     pcb *tmp = waitQ;
 //     while(tmp != NULL) {
 //         tmp = tmp->waitnext;
 //     }
-//     *tmp = p;
-// }
+   //  *tmp = p;
+ }
 
 // pcb *get_waitQ() {
 //     if (waitQ == NULL) {
