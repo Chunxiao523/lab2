@@ -756,7 +756,7 @@ int MyBrk(void *addr) {
                 TracePrintf(0, "Kernel Call: %d\n", i);
                 free_used_page(cur_Proc->page_table[i]);
             } else {
-                if(current_process->pgt[orig_vfn].valid == 0) {
+                if(cur_Proc->page_table[i].valid == 0) {
                     fprintf(stderr, " pte %ld has not been mapped yet!\n", i);
                     return ERROR;
                 }
