@@ -996,8 +996,9 @@ int TtyRead(int term_id, void *buf, int len) {
         memcpy(buf, terms[term_id].readBuff, cnt);
         terms[term_id].buf_ch_cnt = 0;
         return_len = cnt;
+        // TracePrintf(0, "TtyRead: is complte, the return len is %d", return_len);
     }
-    TracePrintf(0, "TtyRead: is complte, the return len is %d", return_len);
+    TracePrintf(0, "TtyRead: is complte, the return len is %d");
     return return_len;
 }
 
