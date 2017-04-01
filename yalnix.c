@@ -463,7 +463,7 @@ void TrapMemory(ExceptionInfo *info){
 void TrapMath(ExceptionInfo *info) {
 
 }
-// int TtyReceive(int tty_id, void *buf, int len)
+// int TtyReceive(int term_id, void *buf, int len)
 // When the user completes an input line on a terminal, the RCS 421 hardware terminal controller will generate a TRAP_TTY_RECEIVE interrupt
 // for this terminal
 
@@ -471,7 +471,7 @@ void TrapMath(ExceptionInfo *info) {
 // interrupt. In the interrupt handler, the kernel should execute a TtyReceive operation for this terminal, in order to retrieve
 // the new input line from the hardware.
 
-// The new input line is copied from the hardware for terminal tty_id into the kernel buffer at virtual address buf,
+// The new input line is copied from the hardware for terminal term_id into the kernel buffer at virtual address buf,
 //  for maximum length to copy of len bytes. The value of len must be equal to TERMINAL_MAX_LINE bytes,
 // The buffer must be in the kernel’s virtual memory (i.e., it must be entirely within virtual memory Region 1).
 // After each TRAP_TTY_RECEIVE interrupt, the kernel must do a TtyReceive and save the new input line in a buffer inside the kernel,
@@ -490,11 +490,11 @@ void TrapTTYReceive(ExceptionInfo *info) {
     int term_id = info->code;
     int received_cnt;
     received_cnt = TtyReceive(term_id, terms[term_id].readBuff + terms[term_id].buf_ch_cnt, TERMINAL_MAX_LINE);
-    terms[tty_id].buf_ch_cnt += received_cnt;
+    terms[term_id].buf_ch_cnt += received_cnt;
 }
 
 void TrapTTYTransmit(ExceptionInfo *info) {
-    int tty_id = info->code;
+    int term_id = info->code;
     //   ContextSwitch();
 }
 
@@ -888,7 +888,7 @@ by the status_ptr argument. On any error, this call instead returns ERROR.
      return return_pid;
  }
 
-/*Read the next line of input (or a portion of it) from terminal tty_id, copying the bytes of input into the buffer referenced by buf.
+/*Read the next line of input (or a portion of it) from terminal term_id, copying the bytes of input into the buffer referenced by buf.
 The maximum length of the line to be returned is given by len. A value of 0 for len is not in itself an error, as this simply means to
 read “nothing” from the terminal. The line returned in the buffer is not null-terminated.
 The calling process is blocked until a line of input is available to be returned. If the length of the next available input line is longer
@@ -898,28 +898,28 @@ than len bytes, only the first len bytes of the line are copied to the calling p
  the number of bytes actually copied into the calling process’s buffer is returned; in case of any error, the value ERROR is returned.
  */
 
-int TtyRead(int tty_id, void *buf, int len) {
-    if (len < 0 || buf == NULL)
-        return ERROR;
-    if (len == 0)
-        return 0;
-    // while (terms[tty_id].char_num == 0) blocked;
-    if (len <= terms[tty_id].char_num) {
-        memcpy(buf,terms[tty_id].readBuffer, len);
-        return len;
-    }
-    else {
-        memcpy(buf, terms[tty_id].readBuffer, terms[tty_id].char_num);
-        return terms[tty_id].char_num;
-    }
-    return 0;
-    TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
+int TtyRead(int term_id, void *buf, int len) {
+    // if (len < 0 || buf == NULL)
+    //     return ERROR;
+    // if (len == 0)
+    //     return 0;
+    // // while (terms[term_id].char_num == 0) blocked;
+    // if (len <= terms[term_id].char_num) {
+    //     memcpy(buf,terms[term_id].readBuffer, len);
+    //     return len;
+    // }
+    // else {
+    //     memcpy(buf, terms[term_id].readBuffer, terms[term_id].char_num);
+    //     return terms[term_id].char_num;
+    // }
+    // return 0;
+    // TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
 
-/*Write the contents of the buffer referenced by buf to the terminal tty_id. The length of the buffer in bytes is given by len
+/*Write the contents of the buffer referenced by buf to the terminal term_id. The length of the buffer in bytes is given by len
 
 */
-int TtyWrite(int tty_id, void *buf, int len) {
+int TtyWrite(int term_id, void *buf, int len) {
     return 0;
     TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
