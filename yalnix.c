@@ -691,9 +691,9 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
         cur_Proc = ((pcb *)p2);
     }
 
-    free((pcb *)p1->ctx);
+    free(((pcb *)p1)->ctx);
 
-    while ((pcb *)p1->statusQ != NULL) {
+    while (((pcb *)p1)->statusQ != NULL) {
         statusbuf=((pcb*)p1)->statusQ;
         ((pcb*)p1)->statusQ=((pcb*)p1)->statusQ->next;
         free(statusbuf);
