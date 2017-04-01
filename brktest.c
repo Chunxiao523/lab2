@@ -23,6 +23,7 @@ main()
 	fprintf(stderr, "Brk %p returned error\n", currbreak);
 	Exit(1);
     }
+    fprintf(stderr, "This is called \n", currbreak);
 
     currbreak++;
     currbreak = (void *)UP_TO_PAGE(currbreak);
@@ -31,7 +32,7 @@ main()
 	fprintf(stderr, "Brk %p returned error\n", currbreak);
 	Exit(1);
     }
-
+    fprintf(stderr, "This is called \n", currbreak);
     new = malloc(10000);
 
     Exit(0);
