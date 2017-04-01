@@ -20,3 +20,4 @@ typedef struct pf {
 extern free_page *phys_free_page;
 
 unsigned long find_free_page(void);
+extern int cur_brk;
