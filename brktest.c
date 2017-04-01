@@ -13,8 +13,6 @@ main()
 
     currbreak = sbrk(0);
 
-    fprintf(stderr, "sbrk(0) = %p,  %d\n", currbreak, Brk(currbreak));
-
     currbreak = (void *)UP_TO_PAGE(currbreak);
     currbreak++;
     currbreak = (void *)UP_TO_PAGE(currbreak);

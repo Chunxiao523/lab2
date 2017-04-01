@@ -752,12 +752,13 @@ int MyBrk(void *addr) {
         for (i=brk_pgn;i>=addr_pgn;i--) {
             if (cur_Proc->page_table[i].valid == 1) {
                 cur_Proc->page_table[i].valid = 0;
+                WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
                 free_used_page(cur_Proc->page_table[i]);
             }
         }
     }
     cur_Proc->brk = (unsigned long)addr;
-    TracePrintf(0, "Brk finished %d\n", cur_Proc->brk);
+    TracePrintf(0, "Brk finished\n");
     return 0;
 }
 
