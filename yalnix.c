@@ -731,7 +731,10 @@ int MyBrk(void *addr) {
 
     if (addr_pgn >= user_stack_bott()-1)
         return ERROR;
-
+    if (addr_pgn == brk_pgn) {
+        cur_Proc->brk = addr;
+        return 0;
+    }
     // allocate
     if (addr_pgn >= brk_pgn) {
         TracePrintf(0, "allocation\n");
