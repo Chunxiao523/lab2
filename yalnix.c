@@ -157,6 +157,7 @@ pcb *get_readQ(Terminal term);
 void add_readQ(pcb *p, Terminal term);
 void add_writeQ(pcb *p, Terminal term);
 pcb *get_readyQ();
+pcb *get_WriteQ(Terminal term);
 /**
  * The procedure named KernelStart is automatically called by the bootstrap firmware in the computer
  * initialize your operating system kernel and then return.
@@ -697,7 +698,7 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
         ((pcb*)p1)->statusQ=((pcb*)p1)->statusQ->next;
         free(statusbuf);
     }
-    free((pcb *)p1);
+    free((void*)(pcb *)p1);
 
 
     return cur_Proc->ctx;
