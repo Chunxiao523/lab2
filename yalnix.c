@@ -98,6 +98,8 @@ free_page *head;
 free_page *newpage;
 
 int free_page_num;
+
+int cur_brk;
 int entry_number;
 /*
 define the terminals, which holds the read queue, write queue, readbuffer, writebuffer for each terms
