@@ -965,6 +965,7 @@ than len bytes, only the first len bytes of the line are copied to the calling p
  */
 // XXX
 int TtyRead(int term_id, void *buf, int len) {
+    TracePrintf(0, "TtyRead: is called, the return len is %d", return_len);
     int return_len;
 
     // error call
@@ -996,6 +997,7 @@ int TtyRead(int term_id, void *buf, int len) {
         terms[term_id].buf_ch_cnt = 0;
         return_len = cnt;
     }
+    TracePrintf(0, "TtyRead: is complte, the return len is %d", return_len);
     return return_len;
 }
 
