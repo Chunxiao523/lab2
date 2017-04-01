@@ -20,20 +20,19 @@ main()
     currbreak = (void *)UP_TO_PAGE(currbreak);
 
     if (Brk(currbreak)) {
-        fprintf(stderr, "Brk %p returned error\n", currbreak);
-        Exit(1);
+	fprintf(stderr, "Brk %p returned error\n", currbreak);
+	Exit(1);
     }
 
     currbreak++;
     currbreak = (void *)UP_TO_PAGE(currbreak);
 
     if (Brk(currbreak)) {
-        fprintf(stderr, "Brk %p returned error\n", currbreak);
-        Exit(1);
+	fprintf(stderr, "Brk %p returned error\n", currbreak);
+	Exit(1);
     }
 
     new = malloc(10000);
-    fprintf(stderr, "brk successful\n", currbreak);
 
     Exit(0);
 }

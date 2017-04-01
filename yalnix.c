@@ -42,7 +42,7 @@ typedef struct pcb {
     pte * page_table;
     int clock_ticks;
     unsigned long brk;
-    struct pcb parent;
+    struct pcb *parent;
     struct pcb *readynext;
     struct pcb *delaynext;
     struct pcb *waitnext;
@@ -359,7 +359,7 @@ void TrapKernel(ExceptionInfo *info) {
             (*info).regs[0] = MyExec(info, (char *)(info->regs[1]), (char **)(info->regs[2]));
             break;
         case YALNIX_EXIT:
-            (*info).regs[0] = MyExit((int)info->regs[1]);
+            MyExit((int)info->regs[1]);
             break;
         case YALNIX_WAIT:
             (*info).regs[0] = MyWait((int)info->regs[1]);
@@ -835,8 +835,10 @@ when a process exit, its resourses should be freed
 */
 void MyExit(int status){
     // if it is init or idle
-    if(cur_Proc->pid==0||cur_Proc->pid==1)
+    if(cur_Proc->pid==0||cur_Proc->pid==1){
         Halt();
+    }
+
 
     // if it is parent, child delete parent
     if (cur_Proc->childQ != NULL) {
@@ -864,6 +866,7 @@ void MyExit(int status){
         }
     }
    // ContextSwitch(exitContextSwitch, cur_Proc->ctx, cur_Proc, readyQ);
+    return 0;
  }
 
 /*
@@ -995,13 +998,13 @@ void add_delayQ(pcb *p) {
     temp->delaynext = p;
 }
 
-// void add_waitQ(pcb *p) {
+ void add_waitQ(pcb *p) {
 //     pcb *tmp = waitQ;
 //     while(tmp != NULL) {
 //         tmp = tmp->waitnext;
 //     }
-//     *tmp = p;
-// }
+   //  *tmp = p;
+ }
 
 // pcb *get_waitQ() {
 //     if (waitQ == NULL) {

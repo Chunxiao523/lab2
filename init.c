@@ -8,4 +8,9 @@ int
 main() {
     printf("Init Process Initialized.\n");
     printf("PID: %d\n", GetPid());
+    while(1){
+        printf("init is running\n");
+        Pause();
+    }
+    Exit(0);
 }
