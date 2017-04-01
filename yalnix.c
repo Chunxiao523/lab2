@@ -109,15 +109,25 @@ typedef struct terminal
     unsigned long buf_ch_cnt;
     char *writeBuffer;
     struct ReadNode *readQ;
+    struct  WriteNode *writeQ;
+    int writing;
 } Terminal;
-
+// QQQ
 /*
- * child of a process which store its pid and status
+ * the read queue node for terminal
  */
 typedef struct ReadNode{
     struct pcb *node;
     struct ReadNode *next;
 } ReadNode;
+
+/*
+ * the write queue node for terminal
+ */
+typedef struct WriteNode{
+    struct pcb *node;
+    struct WriteNode *next;
+} WriteNode;
 
 struct terminal terms[NUM_TERMINALS];
 //terminal terms[NUM_TERMINALS];
@@ -133,6 +143,7 @@ unsigned long find_free_page();
 void allocPageTable(pcb* p);
 SavedContext *MyKernelSwitchFunc(SavedContext *ctxp, void *p1, void *p2);
 SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2);
+SavedContext *commonContextSwitch(SavedContext *ctxp, void *p1, void *p2);
 int MyGetPid();
 void *va2pa(void *va);
 unsigned long user_stack_bott();
@@ -142,6 +153,7 @@ void delete_child(pcb *p);
 void add_statusQ(int status);
 pcb *get_readQ(Terminal term);
 void add_readQ(pcb *p, Terminal term);
+void add_writeQ(pcb *p, Terminal term);
 /**
  * The procedure named KernelStart is automatically called by the bootstrap firmware in the computer
  * initialize your operating system kernel and then return.
@@ -217,8 +229,9 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
     for(i=0;i<NUM_TERMINALS;i++){
         terms[i].buf_ch_cnt=0;
         terms[i].readQ=NULL;
+        terms[i].writeQ= NULL;
+        terms[i].writing = 0;
     }
-
 
     /*
      * Initialize the page table and page table register for region 1 and 0
@@ -465,39 +478,37 @@ void TrapMemory(ExceptionInfo *info){
 void TrapMath(ExceptionInfo *info) {
 
 }
-// int TtyReceive(int term_id, void *buf, int len)
-// When the user completes an input line on a terminal, the RCS 421 hardware terminal controller will generate a TRAP_TTY_RECEIVE interrupt
-// for this terminal
 
-// The terminal number of the terminal generating the interrupt will be made available to the kernel’s interrupt handler for this type of
-// interrupt. In the interrupt handler, the kernel should execute a TtyReceive operation for this terminal, in order to retrieve
-// the new input line from the hardware.
-
-// The new input line is copied from the hardware for terminal term_id into the kernel buffer at virtual address buf,
-//  for maximum length to copy of len bytes. The value of len must be equal to TERMINAL_MAX_LINE bytes,
-// The buffer must be in the kernel’s virtual memory (i.e., it must be entirely within virtual memory Region 1).
-// After each TRAP_TTY_RECEIVE interrupt, the kernel must do a TtyReceive and save the new input line in a buffer inside the kernel,
-// e.g., until a user process requests the next line from the terminal by executing
-// a kernel call to read from this device.
-
-// The actual length of the new input line, including the newline (’\n’), is returned as the return value of TtyReceive. Thus when a blank line
-// is typed, TtyReceive will return a 1, since the blank line is terminated by a newline character. When an end of file character (control-D)
-// is typed, TtyReceive returns 0 for this line. End of file behaves just like any other line of input, however. In particular, you can continue
-// to read more lines after an end of file. The data copied into your buffer by TtyReceive is not terminated with a null character (as would be
-// typical for a string in C); to determine the end of the characters returned in the buffer, you must use the length returned by TtyReceive.
-
-// QQQ
+// handler to read from a terminal
 void TrapTTYReceive(ExceptionInfo *info) {
     //use TtyReceive to write line into buf in region 1, which return the acutual char
     int term_id = info->code;
     int received_cnt;
     received_cnt = TtyReceive(term_id, terms[term_id].readBuff + terms[term_id].buf_ch_cnt, TERMINAL_MAX_LINE);
     terms[term_id].buf_ch_cnt += received_cnt;
+    // if there are blocked reads, begin to read
+    if (terms[term_id].readQ != NULL) {
+        ContextSwitch(commonContextSwitch,cur_Proc->ctx, cur_Proc, get_readQ(terms[term_id]));
+    }
 }
 
+// handler to write to a terminal
+// void TtyTransmit(int tty_id, void *buf, int len)
+// The TtyTransmit operation begins the transmission of len characters from memory, starting at virtual address buf, to terminal tty_id. 
+// The address buf must be in the kernel’s virtual memory, (i.e., it must be in virtual memory Region 1), since otherwise, this memory could 
+// ecome unavail- able to the hardware terminal controller after a context switch. When the data has been completely written out, the terminal 
+// controller will generate a TRAP_TTY_TRANSMIT interrupt. When the TRAP_TTY_TRANSMIT interrupt handler in the operating system kernel is 
+// called, the terminal num- ber of the terminal generating the interrupt will be made available to the handler. Until receiving a 
+// TRAP_TTY_TRANSMIT interrupt for this terminal after executing a TtyTransmit on it, no new TtyTransmit may be executed for this terminal.
+// QQQ
 void TrapTTYTransmit(ExceptionInfo *info) {
     int term_id = info->code;
-    //   ContextSwitch();
+    terms[term_id].writing = 0;
+    if (terms[term_id].writeQ != NULL) {
+        ContextSwitch(commonContextSwitch, cur_Proc->ctx, cur_Proc, get_writeQ(terms[term_id]));
+    } else {
+        ContextSwitch(commonContextSwitch, cur_Proc->ctx, cur_Proc, get_readQ(terms[term_id]));
+    }
 }
 
 /************ Context switch function **********/
@@ -947,13 +958,38 @@ int TtyRead(int term_id, void *buf, int len) {
 }
 
 /*Write the contents of the buffer referenced by buf to the terminal term_id. The length of the buffer in bytes is given by len
-
+Write the contents of the buffer referenced by buf to the terminal tty_id. The length of the buffer in bytes is given by len; 
+the maximum value of len is limited to TERMINAL_MAX_LINE. A value of 0 for len is not in itself an error, as this simply means 
+to write “nothing” to the terminal.
+The calling process is blocked until all characters from the buffer have been written on the terminal. On success, the number of 
+bytes written (which should be len) is returned; in case of any error, the value ERROR is returned.
 */
 int TtyWrite(int term_id, void *buf, int len) {
-    return 0;
+    // if buf is not valid
+    if (buf == NULL || buf < VMEM_0_LIMIT || len <= 0) 
+        return ERROR;
+
+    // if len is larger than the limit len
+    if (len > TERMINAL_MAX_LINE) 
+        len = TERMINAL_MAX_LINE;
+    // if len is 0
+    if (len == 0)
+        return 0;
+    // if terminal is writing, put it into write queue, if not, write immediattely
+    if (terms[term_id].writing == 1) {
+        add_writeQ(cur_Proc, terms[term_id]);
+        // change to the next process in ready queue
+        ContextSwitch(commonContextSwitch, cur_Proc->ctx, cur_Proc, get_readQ(terms[term_id]));
+    } else {
+        terms[term_id].writing = 1;
+        TtyTransmit(term_id, buf, len);
+    }
+    return len;
     TracePrintf(0,"kernel_fork ERROR: not enough phys mem for creat Region0.\n");
 }
 
+// helper function for process schedualling
+/************************************************************************************************/
 void add_readyQ(pcb *p) {
     pcb *temp = readyQ;
     if (temp == NULL) {
@@ -1103,10 +1139,35 @@ void add_readQ(pcb *p, Terminal term) {
     }
 }
 
-// get the pcb of the readnode, which is the head of the readQ of given terminal
+// get the pcb of the writenode, which is the head of the wrQ of given terminal
 pcb *get_readQ(Terminal term) {
     pcb *tmp = term.readQ->node;
     term.readQ = term.readQ->next;
+    return tmp;
+}
+
+void add_writeQ(pcb *p, Terminal term) {
+    WriteNode *tmp;
+    tmp = term.writeQ;
+    if (tmp == NULL) {
+        tmp = (WriteNode*) malloc(sizeof(WriteNode));
+        term.writeQ = tmp;
+        tmp->node = p;
+        tmp->next = NULL;
+    } else {
+        while(tmp->next!=NULL)
+            tmp = tmp->next;
+        tmp->next = (WriteNode*) malloc(sizeof(WriteNode));
+        tmp = tmp->next;
+        tmp->node = p;
+        tmp->next = NULL;
+    }
+}
+
+// get the pcb of the wirtenode, which is the head of the wrQ of given terminal
+pcb *get_WriteQ(Terminal term) {
+    pcb *tmp = term.writeQ->node;
+    term.writeQ = term.writeQ->next;
     return tmp;
 }
 
