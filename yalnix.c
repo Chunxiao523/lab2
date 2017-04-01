@@ -40,18 +40,17 @@ typedef struct pcb {
     SavedContext *ctx;
     int pid;
     pte * page_table;
-    int child_num;
     int clock_ticks;
-    struct pcb *parent;
+    unsigned long brk;
+    struct pcb parent;
     struct pcb *readynext;
     struct pcb *delaynext;
     struct pcb *waitnext;
     struct pcb *delaypre;
     struct pcb *readypre;
-    struct pcb *childnext;
     struct ChildStatus *statusQ;
     struct ChildNode *childQ;
-    unsigned long brk;
+
 } pcb;
 
 pcb *cur_Proc;
@@ -584,77 +583,55 @@ SavedContext *clockSwitch(SavedContext *ctxp, void *p1, void *p2) {
     }
     return cur_Proc->ctx;
 }
-
 // copy page table, kernel stack and ctxp from p1 to p2
 SavedContext *forkSwitch(SavedContext *ctxp, void *p1, void *p2) {
     TracePrintf(0,"forkSwitch is called, ctx is %d \n", ctxp);
-    unsigned long i;
-
-    // save the context to ctxp
-    // return to the new context
+    unsigned long i, j;
     struct pcb* parent = (struct pcb*) p1;
     struct pcb* child = (struct pcb*)p2;
     struct pte* pt1 = parent->page_table;
     struct pte* pt2 = child->page_table;
 
-    // try to find a buffer in the region 1, if no available, find it in region 1
+    for (i = 0; i < PAGE_TABLE_LEN; i ++) {
+        /*
+         * Find the first invalid page in kernel page table, as a buffer to help copy
+         */
+        if(pt1[i].valid == 1) {
+        TracePrintf(2, "Working on %d\n", i);
+            for (j = 0; j < PAGE_TABLE_LEN; j++) {
+                if (kernel_page_table[j].valid==0) {
+                    entry_number = j;
+                    unsigned long p2_pfn = find_free_page();
 
-    for (i = 0; i < PAGE_TABLE_LEN; i++) {
-        if (kernel_page_table[i].valid==0){
-//            kernel_page_table[i].valid = 1;
-//            kernel_page_table[i].kprot = PROT_READ | PROT_WRITE;
-//            kernel_page_table[i].uprot = PROT_NONE;
-//         //   kernel_page_table[i].pfn = find_free_page();
-           // WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) ((void*) (long) ((i * PAGESIZE) + VMEM_1_BASE)));
-            break;
+                    kernel_page_table[entry_number].valid = 1;
+                    kernel_page_table[entry_number].uprot = PROT_NONE;
+                    kernel_page_table[entry_number].kprot = PROT_READ | PROT_WRITE;
+                    kernel_page_table[entry_number].pfn = p2_pfn;
+
+                    void *vaddr_entry = (void*) (long) ((entry_number * PAGESIZE) + VMEM_1_BASE);
+
+                    WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
+                    //TracePrintf(2, "Set the register %d\n", j);
+                    unsigned long addr = i * PAGESIZE + VMEM_0_BASE;
+                    memcpy(vaddr_entry, (void *)addr, PAGESIZE);
+
+                    kernel_page_table[entry_number].valid = 0; //delete the pointer from the buffer page to the physical address
+                    WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
+
+                    // give the pfn from the temp memory to process 2's page table.
+                    pt2[i].pfn = p2_pfn;
+                    pt2[i].valid = 1;
+                    pt2[i].kprot = PROT_READ | PROT_WRITE;
+                    if (i>=PAGE_TABLE_LEN-KERNEL_STACK_PAGES) pt2[i].uprot=PROT_NONE;
+                    else pt2[i].uprot=PROT_READ | PROT_WRITE;
+                    break;
+                }
+            }
         }
     }
-    entry_number = i;
-    void *vaddr_entry = (void*) (long) ((entry_number * PAGESIZE) + VMEM_1_BASE);
-//
-    TracePrintf(2, "Entry number is %d\n", entry_number);
-//    // copy the page use the buffer
-//    for (i = 0; i < PAGE_TABLE_LEN; i++) {
-//        if (i>=PAGE_TABLE_LEN-KERNEL_STACK_PAGES) pt2[i].uprot=PROT_NONE;
-//        else pt2[i].uprot=PROT_READ | PROT_WRITE;
-//        if (pt1[i].valid && i != entry_num) {
-//            memcpy(vaddr_entry, (void *)(long)((i * PAGESIZE) + VMEM_0_BASE), PAGESIZE);
-//            pt2[i].valid = 1;
-//            pt2[i].uprot = pt1[i].uprot;
-//            pt2[i].kprot = pt2[i].kprot;
-//            pt2[i].pfn = pt1[entry_num].pfn;
-//            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-//            pt1[entry_num].pfn = find_free_page();
-//        }
-//    }
-    TracePrintf(2, "begin to copy\n");
-    for (i = 0; i < PAGE_TABLE_LEN; i ++) {
-
-        unsigned long p2_pfn = find_free_page();
-        TracePrintf(2, "Working on %d\n", i);
-        kernel_page_table[entry_number].valid = 1;
-        kernel_page_table[entry_number].uprot = PROT_NONE;
-        kernel_page_table[entry_number].kprot = PROT_READ | PROT_WRITE;
-        kernel_page_table[entry_number].pfn = p2_pfn;
-
-        WriteRegister(REG_TLB_FLUSH, (RCS421RegVal)vaddr_entry);
-        unsigned long addr = i * PAGESIZE + VMEM_0_BASE;
-        memcpy(vaddr_entry, (void *)addr, PAGESIZE);
-        TracePrintf(2, "memcopy on %d\n", i);
-        pt1[entry_number].valid = 0; //delete the pointer from the buffer page to the physical address
-        WriteRegister(REG_TLB_FLUSH, (RCS421RegVal) vaddr_entry);
-        TracePrintf(2, "flush %d\n", i);
-        // give the pfn from the temp memory to process 2's page table.
-        pt2[i].pfn = p2_pfn;
-        pt2[i].valid = 1;
-        pt2[i].kprot = PROT_READ|PROT_WRITE;
-        pt2[i].uprot = PROT_NONE;
-    }
-    TracePrintf(2, "copy!\n");
     free_used_page(kernel_page_table[entry_number]);
-    WriteRegister(REG_PTR0, (RCS421RegVal)pt2);
+    WriteRegister(REG_PTR0, (RCS421RegVal)va2pa((void *)pt2));
     WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
-    TracePrintf(0,"flush complete\n");
     memcpy(((pcb *)p2)->ctx, ctxp, sizeof(SavedContext));
     cur_Proc = child;
     add_readyQ(parent);
@@ -671,7 +648,9 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
         }
     }
     // free its pcb content
+
     // free(p1->ctx);
+
     // free its status queue
     //
     // switch to the next process in the readyQ
@@ -696,7 +675,6 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
 //     pte* pt2 = ->page_table;
 
 // }
-
 /*************** Kernel Call ***************/
 /**
  * Get pid kernel call
@@ -769,7 +747,7 @@ int MyBrk(void *addr) {
  * return val: process ID for parent process, 0 for child process
  * child process's address is a copy of parent process's address space, the copy should include
  * neccessary information from parent process's pcb such as ctx*/
-int MyFork(void){
+int MyFork(){
     TracePrintf(0, "fork is called\n");
     int child_pid;
     unsigned long i;
@@ -798,20 +776,18 @@ int MyFork(void){
     allocPageTable(child);
     // init the child's pcb
     child->pid=pid++;
-    child->child_num = 0;
     child->clock_ticks = 0;
     child->parent = cur_Proc;
     child->brk = parent->brk;
+    child->childQ = NULL;
+    child->statusQ = NULL;
 
     TracePrintf(0, "come to ContextSwitch\n");
     // copy the context, page table, page mem to the child and change to the child process, put the parent into the ready queue
     ContextSwitch(forkSwitch, parent->ctx, parent, child);
-    TracePrintf(0,"switch complete\n");
     if (cur_Proc->pid == parent->pid) {
-        TracePrintf(0,"return id \n");
         return child_pid;
     } else {
-        TracePrintf(0,"id\n");
         return 0;
     }
 }
@@ -833,8 +809,7 @@ int MyExec(ExceptionInfo *info, char *filename, char **argvec) {
 //
 }
 
-/* and is thus then referred to as an
-
+/*
 When a process exits or is terminated by the kernel, all resources used by the calling process 
 are freed, except for the saved status inform
 tion (if the process is not an orphan). The Exit kernel call can never return.
@@ -857,26 +832,25 @@ void MyExit(int status){
             tmp->node->parent = NULL;
             tmp = tmp->next;
         }
-        TracePrintf(0, "myexit: exit process has children");
+        TracePrintf(0, "MyExit: exit process has children\n");
     }
 
     // if p has a parent 
     // report status to its parent
     // delete itself from childQ of its parent, check if the parent should be assigned to the readyQ
     if (cur_Proc->parent != NULL) {
-        TracePrintf(0, "myexit: exit process has parent");
+        TracePrintf(0, "myexit: exit process has parent\n");
         add_statusQ(cur_Proc);
         TracePrintf(0, "report status to its parent\n");
         delete_child(cur_Proc);
         TracePrintf(0, "myexit: delete_child");
+
         if (cur_Proc->parent->childQ == NULL) {
             add_readyQ(cur_Proc->parent);
             TracePrintf(0, "myexit: parent it put to readyqueue");
         }
     }
-
-    ContextSwitch(exitContextSwitch, cur_Proc->ctx, cur_Proc, readyQ);
-
+   // ContextSwitch(exitContextSwitch, cur_Proc->ctx, cur_Proc, readyQ);
  }
 
 /*
@@ -892,21 +866,21 @@ by the status_ptr argument. On any error, this call instead returns ERROR.
 */
  int MyWait(int *status_ptr) {
 
-//     int return_pid;
-//     pcb *tmp = cur_Proc;
-//     // if calling process have no child, return ERROR
-//     if (cur_Proc->child_num == 0)
-//         return ERROR;
-//     // if child queue is empty, block the calling process, return until one child is exit or terminated
-//     if (cur_Proc->childQ == NULL) {
-//         ContextSwitch(delayContextSwitch(), cur_Proc->ctx,cur_Proc,get_readyQ());
-//         add_waitQ(tmp);
-//         return
-//     }
-//     return_pid = tmp->childQ->pid;
-//     *status_ptr = tmp->childQ->status;
+     int return_pid;
+     pcb *tmp = cur_Proc;
+     // if calling process have no child, return ERROR
+     if (cur_Proc->childQ == NULL)
+         return ERROR;
+     // if child status queue is empty, block the calling process, return until one child is exit or terminated
+     if (cur_Proc->statusQ == NULL) {
+        // ContextSwitch(delayContextSwitch(), cur_Proc->ctx,cur_Proc,get_readyQ());
+         add_waitQ(tmp);
+         return ERROR;
+     }
+     return_pid = tmp->statusQ->pid;
+     *status_ptr = tmp->statusQ->status;
 
-//     return return_pid;
+     return return_pid;
  }
 
 /*Read the next line of input (or a portion of it) from terminal tty_id, copying the bytes of input into the buffer referenced by buf.
@@ -1072,7 +1046,7 @@ void add_statusQ(int status) {
         tmp->next = NULL;
     } else {
         while(tmp->next!=NULL)
-            tmp = tmp->next;
+        tmp = tmp->next;
         tmp->next = (ChildStatus*) malloc(sizeof(ChildStatus));
         tmp = tmp->next;
         tmp->pid = cur_Proc->pid;
@@ -1146,7 +1120,10 @@ void *va2pa(void *va) {
       //  return (void *)((long)kernel_page_table[((long)DOWN_TO_PAGE(va) - VMEM_1_BASE) >> PAGESHIFT].pfn*PAGESIZE + ((long)va & PAGEOFFSET)) ;
     } else {
         TracePrintf(2, "Va to Pa: Virtual address in region 0\n");
-        return (void *)((long)cur_Proc->page_table[((long)DOWN_TO_PAGE(va) - VMEM_0_BASE) >> PAGESHIFT].pfn);
+        unsigned long idx = ((long)va-VMEM_0_BASE)>>PAGESHIFT;
+        return (kernel_page_table[idx].pfn<<PAGESHIFT | ((long)va & PAGEOFFSET));
+
+      //  return (void *)((long)cur_Proc->page_table[((long)DOWN_TO_PAGE(va) - VMEM_0_BASE) >> PAGESHIFT].pfn);
     }
 }
 
