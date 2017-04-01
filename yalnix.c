@@ -322,14 +322,17 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
             LoadProgram("idle", cmd_args, info, process_page_table);
             cur_Proc->brk = cur_brk;
+            cur_Proc->pid = 0;
         } else if(cur_Proc->pid==1) {
             if (cmd_args==NULL || cmd_args[0]==NULL) {
                 LoadProgram("init",cmd_args,info, init_page_table);
                 cur_Proc->brk = cur_brk;
+                cur_Proc->pid = 1;
             }
             else {
                 LoadProgram(cmd_args[0], cmd_args, info, init_page_table);
                 cur_Proc->brk = cur_brk;
+                cur_Proc->pid = pid ++;
                 fprintf(stderr,  "Kernel Start: running your process now.\n");
             }
         }
@@ -860,6 +863,7 @@ int MyExec(ExceptionInfo *info, char *filename, char **argvec) {
     TracePrintf(0,"Kernel Call: EXEC called! .\n", filename);
     int status;
     status = LoadProgram(filename, argvec, info, process_page_table);
+
     if (status == -1)
         return ERROR;
     // if (status == -2)
