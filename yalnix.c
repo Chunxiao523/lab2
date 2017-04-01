@@ -48,7 +48,7 @@ typedef struct pcb {
     struct pcb *waitnext;
     struct pcb *delaypre;
     struct pcb *readypre;
-
+    int waitcalling; // if it calls wait but no status could be return, set as 1, otherwise 0
     struct ChildStatus *statusQ;
     struct ChildNode *childQ;
 } pcb;
@@ -931,22 +931,25 @@ calls exits or is terminated by the kernel (if a process is terminated by the ke
 On success, the Wait call returns the process ID of the child process and that child’s exit status is copied to the integer pointed to
 by the status_ptr argument. On any error, this call instead returns ERROR.
 */
+ //WWW
  int MyWait(int *status_ptr) {
-
      int return_pid;
      pcb *tmp = cur_Proc;
+
      // if calling process have no child, return ERROR
      if (cur_Proc->childQ == NULL)
          return ERROR;
-     // if child status queue is empty, block the calling process, return until one child is exit or terminated
-     if (cur_Proc->statusQ == NULL) {
-        // ContextSwitch(delayContextSwitch(), cur_Proc->ctx,cur_Proc,get_readyQ());
-         add_waitQ(tmp);
-         return ERROR;
-     }
-     return_pid = tmp->statusQ->pid;
-     *status_ptr = tmp->statusQ->status;
 
+     // if child status queue is empty, block the calling process, change to the next process, return until one child is exit or terminated
+     if (cur_Proc->statusQ == NULL) {
+          cur_Proc->waitcalling = 1;
+          ContextSwitch(delayContextSwitch, cur_Proc->ctx, cur_Proc, get_readQ());
+     } else {
+        statusNode *tmp = get_statusQ();
+        return_pid = tmp->pid;
+        *status_ptr = tmp->status;
+        cur_Proc->waitcalling = 0;
+     }
      return return_pid;
  }
 
@@ -1150,13 +1153,13 @@ void add_statusQ(int status) {
     }
 }
 
-// ChildStatus *get_statusQ(pcb *p) {
-//     if (p->statusQ == NULL)
-//         return ERROR;
-//     ChildStatus *tmp = p->statusQ;
-//     p->statusQ = p->statusQ->next;
-//     return tmp;
-// }
+ChildStatus *get_statusQ() {
+    if (cur_Proc->statusQ == NULL)
+        return ERROR;
+    ChildStatus *tmp = cur_Proc->statusQ;
+    cur_Proc->statusQ = cur_Proc->statusQ->next;
+    return tmp;
+}
 //NOW
 // put a process into read queue of a terminla
 void add_readQ(pcb *p, Terminal term) {
