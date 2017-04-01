@@ -721,6 +721,7 @@ set the lowest location not used by the program
 the actual break should be rounded up to the pagesize
 */
 int MyBrk(void *addr) {
+    TracePrintf(0, "Kernel Call: enter Brk()\n");
     if (addr == NULL)
         return ERROR;
 
@@ -733,6 +734,7 @@ int MyBrk(void *addr) {
 
     // allocate
     if (addr_pgn >= brk_pgn) {
+        TracePrintf(0, "allocation\n");
         if (addr_pgn - brk_pgn>free_page_num)
             return ERROR;
 
@@ -746,6 +748,7 @@ int MyBrk(void *addr) {
         }
     } else {
         // deallocate
+        TracePrintf(0, "Kernel Call: deallocation\n");
         for (i=brk_pgn;i>=addr_pgn;i--) {
             if (cur_Proc->page_table[i].valid == 1) {
                 cur_Proc->page_table[i].valid = 0;
