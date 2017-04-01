@@ -158,6 +158,7 @@ void add_readQ(pcb *p, Terminal term);
 void add_writeQ(pcb *p, Terminal term);
 pcb *get_readyQ();
 pcb *get_WriteQ(Terminal term);
+pcb *init_pcb();
 /**
  * The procedure named KernelStart is automatically called by the bootstrap firmware in the computer
  * initialize your operating system kernel and then return.
@@ -331,8 +332,7 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
             }
             else {
                 LoadProgram(cmd_args[0], cmd_args, info, init_page_table);
-                cur_Proc->brk = cur_brk;
-                cur_Proc->pid = pid ++;
+                cur_Proc = init_pcb();
                 fprintf(stderr,  "Kernel Start: running your process now.\n");
             }
         }
@@ -893,6 +893,7 @@ void MyExit(int status){
     }
     // if it is parent, child delete parent
     if (cur_Proc->childQ != NULL) {
+        TracePrintf(0,"Kernel call: This process has child\n");
         ChildNode *tmp = cur_Proc->childQ;
         while(tmp != NULL) {
             tmp->node->parent = NULL;
@@ -1339,4 +1340,20 @@ void allocPageTable(pcb* p) {
     }
 }
 
-
+pcb *init_pcb() {
+    pcb *newpcb =  (pcb *)malloc(sizeof(pcb));
+    newpcb->ctx = (SavedContext *)malloc(sizeof(SavedContext));;
+    newpcb->delaynext = NULL;
+    newpcb->brk = cur_brk;
+    newpcb->childQ = NULL;
+    newpcb->clock_ticks = 2;
+    newpcb->delaypre = NULL;
+    newpcb->page_table = process_page_table;
+    newpcb->parent = NULL;
+    newpcb->pid = pid++;
+    newpcb->readynext = NULL;
+    newpcb->readypre = NULL;
+    newpcb->statusQ = NULL;
+    newpcb->waitnext=NULL;
+    return newpcb;
+}
