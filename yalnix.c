@@ -907,7 +907,7 @@ void MyExit(int status){
     // delete itself from childQ of its parent, check if the parent should be assigned to the readyQ
     if (cur_Proc->parent != NULL) {
         TracePrintf(0, "myexit: exit process has parent\n");
-        add_statusQ(cur_Proc);
+        add_statusQ(status);
         TracePrintf(0, "report status to its parent\n");
         delete_child(cur_Proc);
         TracePrintf(0, "myexit: delete_child");
