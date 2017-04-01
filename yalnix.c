@@ -50,7 +50,6 @@ typedef struct pcb {
     struct pcb *readypre;
     struct ChildStatus *statusQ;
     struct ChildNode *childQ;
-
 } pcb;
 
 pcb *cur_Proc;
@@ -315,10 +314,15 @@ void KernelStart(ExceptionInfo *info, unsigned int pmem_size, void *orig_brk, ch
 
         if(cur_Proc->pid==0) //current running process is idle
             LoadProgram("idle",cmd_args, info, process_page_table);
+            cur_Proc->brk = cur_brk;
         else if(cur_Proc->pid==1) {
-            if (cmd_args==NULL || cmd_args[0]==NULL) LoadProgram("init",cmd_args,info, init_page_table);
+            if (cmd_args==NULL || cmd_args[0]==NULL) {
+                LoadProgram("init",cmd_args,info, init_page_table);
+                cur_Proc->brk = cur_brk;
+            }
             else {
                 LoadProgram(cmd_args[0], cmd_args, info, init_page_table);
+                cur_Proc->brk = cur_brk;
                 fprintf(stderr,  "Kernel Start: running your process now.\n");
             }
         }
@@ -732,6 +736,7 @@ set the lowest location not used by the program
 the actual break should be rounded up to the pagesize
 */
 int MyBrk(void *addr) {
+    TracePrintf(0, "Kernel Call: enter Brk()\n");
     if (addr == NULL)
         return ERROR;
 
@@ -741,9 +746,13 @@ int MyBrk(void *addr) {
 
     if (addr_pgn >= user_stack_bott()-1)
         return ERROR;
-
+    if (addr_pgn == brk_pgn) {
+        cur_Proc->brk = addr;
+        return 0;
+    }
     // allocate
     if (addr_pgn >= brk_pgn) {
+        TracePrintf(0, "allocation\n");
         if (addr_pgn - brk_pgn>free_page_num)
             return ERROR;
 
@@ -755,18 +764,32 @@ int MyBrk(void *addr) {
                 cur_Proc->page_table[i].pfn=find_free_page();
             }
         }
+        WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
     } else {
         // deallocate
+        TracePrintf(0, "Kernel Call: deallocation\n");
         for (i=brk_pgn;i>=addr_pgn;i--) {
             if (cur_Proc->page_table[i].valid == 1) {
                 cur_Proc->page_table[i].valid = 0;
+                TracePrintf(0, "Kernel Call: %d\n", i);
                 free_used_page(cur_Proc->page_table[i]);
+            } else {
+                if(cur_Proc->page_table[i].valid == 0) {
+                    fprintf(stderr, " pte %ld has not been mapped yet!\n", i);
+                    return ERROR;
+                }
             }
+            WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0);
         }
     }
+
     cur_Proc->brk = (unsigned long)addr;
+    TracePrintf(0, "Brk finished\n");
     return 0;
 }
+
+
+
 
 
 /* input args: nond
@@ -1204,8 +1227,9 @@ unsigned long find_free_page() {
 
 */
 int free_used_page(pte page_entry) {
+    TracePrintf(0,"Free the used page\n");
     free_page *newpage = (free_page*)malloc(sizeof(free_page));
-    TracePrintf(0,"newpage complag\n");
+
     newpage->phys_page_num = page_entry.pfn;
     newpage->next = head->next;
     head->next = newpage;
