@@ -881,6 +881,7 @@ if a parent is terminate, its child's parent become null
 when a process exit, its resourses should be freed
 */
 void MyExit(int status){
+    TracePrintf(0,"Kernel call: Enter the Exit Kernel call\n");
     // if it is init or idle
     if(cur_Proc->pid==0||cur_Proc->pid==1){
         Halt();
