@@ -702,7 +702,7 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
     free((void*)(pcb *)p1);
 
     TracePrintf(0,"Kernel call: Context switch finished\n");
-    return cur_Proc->ctx;
+    return ((pcb *)p2)->ctx;
 }
 
 /*common contest switch*/
