@@ -679,7 +679,7 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
     for (i = 0; i < PAGE_TABLE_LEN; i++) {
         if (pt1[i].valid) {
             free_used_page(pt1[i]);
-            pt1[i].valid = 0;
+            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
         }
     }
     TracePrintf(0,"Kernel call: Free its physical frams\n");
@@ -703,7 +703,7 @@ SavedContext *exitContextSwitch(SavedContext *ctxp, void *p1, void *p2){
     free((void*)(pcb *)p1);
 
     TracePrintf(0,"Kernel call: Context switch finished\n");
-    return ((pcb *)p2)->ctx;
+    return cur_Proc->ctx;
 }
 
 /*common contest switch*/
