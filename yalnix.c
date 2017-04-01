@@ -159,6 +159,7 @@ void add_writeQ(pcb *p, Terminal term);
 pcb *get_readyQ();
 pcb *get_WriteQ(Terminal term);
 pcb *init_pcb();
+ChildStatus *get_statusQ();
 /**
  * The procedure named KernelStart is automatically called by the bootstrap firmware in the computer
  * initialize your operating system kernel and then return.
