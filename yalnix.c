@@ -140,6 +140,8 @@ unsigned long buf_region1();
 void MyExit(int status);
 void delete_child(pcb *p);
 void add_statusQ(int status);
+pcb *get_readQ(Terminal term);
+void add_readQ(pcb *p, Terminal term);
 /**
  * The procedure named KernelStart is automatically called by the bootstrap firmware in the computer
  * initialize your operating system kernel and then return.
