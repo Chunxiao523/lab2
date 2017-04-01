@@ -827,8 +827,10 @@ when a process exit, its resourses should be freed
 */
 void MyExit(int status){
     // if it is init or idle
-    if(cur_Proc->pid==0||cur_Proc->pid==1)
+    if(cur_Proc->pid==0||cur_Proc->pid==1){
         Halt();
+    }
+
 
     // if it is parent, child delete parent
     if (cur_Proc->childQ != NULL) {
@@ -869,7 +871,7 @@ if there are no exited child processes waiting for collection by this calling pr
 calls exits or is terminated by the kernel (if a process is terminated by the kernel, its exit status should appear to its parent as ERROR).
 On success, the Wait call returns the process ID of the child process and that child’s exit status is copied to the integer pointed to
 by the status_ptr argument. On any error, this call instead returns ERROR.
-*/ 
+*/
  int MyWait(int *status_ptr) {
 
      int return_pid;
